@@ -16,7 +16,26 @@ Works **locally** or on **Render** (free Docker web service).
 
 ---
 
-## Option A — Run locally (most reliable)
+## Share with a friend (Windows .exe)
+
+Build a portable app your friend can run **without Python or Render**:
+
+```bat
+cd launcher
+build.bat
+```
+
+That creates `release/TubeTone/` containing:
+
+- `TubeTone.exe` — auto-installs ffmpeg on first run + starts the local server  
+- `extension/` — Load unpacked in Chrome  
+- `README.txt` — setup steps for your friend  
+
+Zip the `TubeTone` folder and send it. They double-click `TubeTone.exe`, load the extension, done.
+
+Local use is far more reliable than Render (no bot/IP/memory limits).
+
+---
 
 1. Install **ffmpeg** and keep it on PATH (or at `C:\ffmpeg\bin`)
 2. Double-click `start-server.bat` (or `python server/server.py`)

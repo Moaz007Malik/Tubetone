@@ -3,3 +3,7 @@ __pycache__/
 .env
 cookies.txt
 **/cookies.txt
+launcher/build/
+launcher/dist/
+launcher/*.spec
+release/
