@@ -306,21 +306,6 @@ def run_gui() -> None:
     )
     style.map("Ghost.TButton", background=[("active", COLORS["border"])])
     style.configure(
-        "TCombobox",
-        fieldbackground=COLORS["panel2"],
-        background=COLORS["panel2"],
-        foreground=COLORS["text"],
-        arrowcolor=COLORS["accent"],
-        padding=6,
-    )
-    style.configure(
-        "TEntry",
-        fieldbackground=COLORS["panel2"],
-        foreground=COLORS["text"],
-        insertcolor=COLORS["text"],
-        padding=6,
-    )
-    style.configure(
         "Amber.Horizontal.TProgressbar",
         troughcolor=COLORS["panel2"],
         background=COLORS["accent"],
@@ -391,21 +376,49 @@ def run_gui() -> None:
 
     ttk.Label(opts, text="BITRATE", style="Muted.TLabel").grid(row=0, column=0, sticky="w")
     bitrate_var = tk.StringVar(value="128")
-    bitrate_box = ttk.Combobox(
-        opts,
-        textvariable=bitrate_var,
-        values=["64", "128", "192", "256", "320"],
-        width=8,
-        state="readonly",
+    bitrate_menu = tk.OptionMenu(opts, bitrate_var, "64", "128", "192", "256", "320")
+    bitrate_menu.config(
+        bg=COLORS["panel2"],
+        fg=COLORS["text"],
+        activebackground=COLORS["border"],
+        activeforeground=COLORS["text"],
+        highlightthickness=1,
+        highlightbackground=COLORS["border"],
+        bd=0,
+        relief="flat",
+        font=("Segoe UI", 11),
+        width=6,
+        indicatoron=True,
+        direction="below",
     )
-    bitrate_box.grid(row=1, column=0, sticky="w", pady=(4, 0))
+    bitrate_menu["menu"].config(
+        bg=COLORS["panel2"],
+        fg=COLORS["text"],
+        activebackground=COLORS["accent"],
+        activeforeground="#1a1208",
+        font=("Segoe UI", 11),
+        bd=0,
+    )
+    bitrate_menu.grid(row=1, column=0, sticky="w", pady=(4, 0))
 
     ttk.Label(opts, text="SAVE FOLDER", style="Muted.TLabel").grid(
         row=0, column=1, sticky="w", padx=(20, 0)
     )
     out_var = tk.StringVar(value=str(DEFAULT_OUT))
-    out_entry = ttk.Entry(opts, textvariable=out_var, width=42)
-    out_entry.grid(row=1, column=1, sticky="we", padx=(20, 8), pady=(4, 0))
+    out_entry = tk.Entry(
+        opts,
+        textvariable=out_var,
+        width=42,
+        bg=COLORS["panel2"],
+        fg=COLORS["text"],
+        insertbackground=COLORS["accent"],
+        relief="flat",
+        highlightthickness=1,
+        highlightbackground=COLORS["border"],
+        highlightcolor=COLORS["accent"],
+        font=("Segoe UI", 10),
+    )
+    out_entry.grid(row=1, column=1, sticky="we", padx=(20, 8), pady=(4, 0), ipady=6)
     opts.columnconfigure(1, weight=1)
 
     def pick_folder() -> None:
