@@ -9,6 +9,7 @@ const els = {
   settingsPanel: document.getElementById("settingsPanel"),
   serverUrl: document.getElementById("serverUrl"),
   apiKey: document.getElementById("apiKey"),
+  sendCookies: document.getElementById("sendCookies"),
   saveSettings: document.getElementById("saveSettings"),
   videoMeta: document.getElementById("videoMeta"),
   thumb: document.getElementById("thumb"),
@@ -28,7 +29,7 @@ const els = {
   toast: document.getElementById("toast"),
 };
 
-let config = { serverUrl: DEFAULT_SERVER, apiKey: "" };
+let config = { serverUrl: DEFAULT_SERVER, apiKey: "", sendCookies: true };
 let current = null;
 let queue = [];
 let busy = false;
@@ -56,7 +57,11 @@ function bindEvents() {
   els.saveSettings.addEventListener("click", async () => {
     const url = els.serverUrl.value.trim().replace(/\/$/, "") || DEFAULT_SERVER;
     const key = els.apiKey.value.trim();
-    config = { serverUrl: url, apiKey: key };
+    config = {
+      serverUrl: url,
+      apiKey: key,
+      sendCookies: els.sendCookies.checked,
+    };
     await chrome.storage.local.set(config);
     if (url.startsWith("https://") && !url.includes("onrender.com")) {
       try {
@@ -101,11 +106,13 @@ function bindEvents() {
 }
 
 async function loadConfig() {
-  const data = await chrome.storage.local.get(["serverUrl", "apiKey"]);
+  const data = await chrome.storage.local.get(["serverUrl", "apiKey", "sendCookies"]);
   config.serverUrl = (data.serverUrl || DEFAULT_SERVER).replace(/\/$/, "");
   config.apiKey = data.apiKey || "";
+  config.sendCookies = data.sendCookies !== false;
   els.serverUrl.value = config.serverUrl;
   els.apiKey.value = config.apiKey;
+  els.sendCookies.checked = config.sendCookies;
 }
 
 async function restoreBitrates() {
@@ -131,6 +138,58 @@ function authHeaders(extra = {}) {
 
 function serverBase() {
   return config.serverUrl.replace(/\/$/, "");
+}
+
+/** Export YouTube (+ related) cookies as Netscape cookies.txt for yt-dlp. */
+async function getYoutubeCookiesNetscape() {
+  if (!config.sendCookies) return "";
+
+  const domains = [
+    ".youtube.com",
+    "youtube.com",
+    ".google.com",
+    "google.com",
+    ".youtube-nocookie.com",
+  ];
+  const seen = new Set();
+  const rows = ["# Netscape HTTP Cookie File", "# TubeTone auto-export"];
+
+  for (const domain of domains) {
+    let list = [];
+    try {
+      list = await chrome.cookies.getAll({ domain });
+    } catch {
+      continue;
+    }
+    for (const c of list) {
+      const key = `${c.domain}|${c.path}|${c.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const host = c.domain.startsWith(".") ? c.domain : c.domain;
+      const includeSub = host.startsWith(".") ? "TRUE" : "FALSE";
+      const secure = c.secure ? "TRUE" : "FALSE";
+      const expires = c.expirationDate ? Math.floor(c.expirationDate) : 0;
+      // Netscape: domain, includeSubdomains, path, secure, expires, name, value
+      rows.push(
+        [host, includeSub, c.path || "/", secure, String(expires), c.name, c.value].join(
+          "\t"
+        )
+      );
+    }
+  }
+
+  return rows.length > 2 ? rows.join("\n") : "";
+}
+
+async function fetchVideoInfo(url) {
+  const cookies = await getYoutubeCookiesNetscape();
+  const res = await fetch(`${serverBase()}/info`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ url, cookies }),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 async function checkServer() {
@@ -200,11 +259,8 @@ async function loadCurrentTab() {
 
   try {
     if (await checkServer()) {
-      const res = await fetch(`${serverBase()}/info?url=${encodeURIComponent(url)}`, {
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        const info = await res.json();
+      const info = await fetchVideoInfo(url);
+      if (info) {
         title = info.title || title;
         thumb = info.thumbnail || thumb;
       }
@@ -259,11 +315,8 @@ async function addManualUrl() {
 
   try {
     if (await checkServer()) {
-      const res = await fetch(`${serverBase()}/info?url=${encodeURIComponent(url)}`, {
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        const info = await res.json();
+      const info = await fetchVideoInfo(url);
+      if (info) {
         title = info.title || title;
         thumb = info.thumbnail || thumb;
       }
@@ -364,10 +417,16 @@ function filenameFromResponse(res, fallback) {
 }
 
 async function requestDownload(video, bitrate) {
+  const cookies = await getYoutubeCookiesNetscape();
   const res = await fetch(`${serverBase()}/download`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ url: video.url, bitrate: Number(bitrate), mode: "file" }),
+    body: JSON.stringify({
+      url: video.url,
+      bitrate: Number(bitrate),
+      mode: "file",
+      cookies,
+    }),
   });
 
   const type = res.headers.get("Content-Type") || "";

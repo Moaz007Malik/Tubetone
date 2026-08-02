@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
   "name": "YouTube MP3 Downloader",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Download YouTube audio as MP3 with bitrate selection and bulk queue. Works with local or Render companion server.",
-  "permissions": ["activeTab", "storage", "tabs", "downloads"],
+  "permissions": ["activeTab", "storage", "tabs", "downloads", "cookies"],
   "host_permissions": [
     "http://127.0.0.1:8765/*",
     "http://localhost:8765/*",
     "https://*.onrender.com/*",
     "*://*.youtube.com/*",
-    "*://youtu.be/*"
+    "*://youtube.com/*",
+    "*://youtu.be/*",
+    "*://*.google.com/*"
   ],
   "optional_host_permissions": [
     "https://*/*",

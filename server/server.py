@@ -110,7 +110,7 @@ def setup_cookies() -> None:
 setup_cookies()
 
 
-def ydl_base_opts() -> dict:
+def ydl_base_opts(cookiefile: str | None = None) -> dict:
     opts: dict = {
         "quiet": True,
         "no_warnings": True,
@@ -118,11 +118,30 @@ def ydl_base_opts() -> dict:
     }
     if FFMPEG_LOCATION:
         opts["ffmpeg_location"] = FFMPEG_LOCATION
-    if COOKIES_PATH:
+    # Per-request cookies from the extension take priority
+    if cookiefile:
+        opts["cookiefile"] = cookiefile
+    elif COOKIES_PATH:
         opts["cookiefile"] = str(COOKIES_PATH)
-    if COOKIES_FROM_BROWSER:
+    if COOKIES_FROM_BROWSER and not cookiefile:
         opts["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
     return opts
+
+
+def write_request_cookies(cookies_text: str | None) -> Path | None:
+    """Write Netscape cookies from the extension into a temp file."""
+    if not cookies_text or not str(cookies_text).strip():
+        return None
+    text = str(cookies_text).replace("\\n", "\n").strip()
+    if "\t" not in text:
+        return None
+    fd, name = tempfile.mkstemp(prefix="cookies_", suffix=".txt", dir=str(DOWNLOAD_DIR))
+    os.close(fd)
+    path = Path(name)
+    if not text.lstrip().startswith("#"):
+        text = "# Netscape HTTP Cookie File\n" + text
+    path.write_text(text, encoding="utf-8")
+    return path
 
 
 def cors_headers(handler: BaseHTTPRequestHandler) -> None:
@@ -177,8 +196,8 @@ def require_api_key(handler: BaseHTTPRequestHandler) -> bool:
     return False
 
 
-def fetch_info(url: str) -> dict:
-    opts = ydl_base_opts()
+def fetch_info(url: str, cookiefile: str | None = None) -> dict:
+    opts = ydl_base_opts(cookiefile)
     opts["skip_download"] = True
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -190,7 +209,7 @@ def fetch_info(url: str) -> dict:
     }
 
 
-def download_mp3(url: str, bitrate: int) -> dict:
+def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
     if bitrate not in ALLOWED_BITRATES:
         raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
     if not FFMPEG_LOCATION:
@@ -200,7 +219,7 @@ def download_mp3(url: str, bitrate: int) -> dict:
 
     work = Path(tempfile.mkdtemp(prefix="tubetone_", dir=str(DOWNLOAD_DIR)))
     outtmpl = str(work / "%(title)s [%(id)s].%(ext)s")
-    opts = ydl_base_opts()
+    opts = ydl_base_opts(cookiefile)
     opts.update(
         {
             "format": "bestaudio/best",
@@ -313,24 +332,31 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/download":
+        if parsed.path not in ("/download", "/info"):
             send_json(self, 404, {"error": "Not found"})
             return
         if not require_api_key(self):
             return
 
+        cookie_path = None
         result = None
         try:
             body = read_json(self)
             url = body.get("url")
-            bitrate = int(body.get("bitrate", 128))
-            # json = local-style metadata; file = stream MP3 (needed on Render)
-            mode = (body.get("mode") or "file").lower()
             if not url:
                 send_json(self, 400, {"error": "Missing url"})
                 return
 
-            result = download_mp3(url, bitrate)
+            cookie_path = write_request_cookies(body.get("cookies"))
+            cookiefile = str(cookie_path) if cookie_path else None
+
+            if parsed.path == "/info":
+                send_json(self, 200, fetch_info(url, cookiefile))
+                return
+
+            bitrate = int(body.get("bitrate", 128))
+            mode = (body.get("mode") or "file").lower()
+            result = download_mp3(url, bitrate, cookiefile)
             path = Path(result["path"])
             filename = result["filename"]
 
@@ -366,6 +392,8 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             if result:
                 cleanup_work(result)
+            if cookie_path:
+                cookie_path.unlink(missing_ok=True)
 
 
 def quote_filename(name: str) -> str:
@@ -393,8 +421,7 @@ def main() -> None:
     elif COOKIES_PATH:
         print(f"  cookies: {COOKIES_PATH}")
     else:
-        print("  cookies: none (YouTube may show bot check on Render)")
-        print("  Set YTDLP_COOKIES env on Render — see README")
+        print("  cookies: extension can send per-request (or set YTDLP_COOKIES)")
     print("=" * 56)
     try:
         server.serve_forever()
