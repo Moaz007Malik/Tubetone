@@ -115,6 +115,12 @@ def ydl_base_opts(cookiefile: str | None = None) -> dict:
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
+        # Android/iOS clients often expose audio formats when web is restricted
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"],
+            }
+        },
     }
     if FFMPEG_LOCATION:
         opts["ffmpeg_location"] = FFMPEG_LOCATION
@@ -156,12 +162,15 @@ def cors_headers(handler: BaseHTTPRequestHandler) -> None:
 
 def send_json(handler: BaseHTTPRequestHandler, status: int, payload: dict) -> None:
     body = json.dumps(payload).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json; charset=utf-8")
-    handler.send_header("Content-Length", str(len(body)))
-    cors_headers(handler)
-    handler.end_headers()
-    handler.wfile.write(body)
+    try:
+        handler.send_response(status)
+        handler.send_header("Content-Type", "application/json; charset=utf-8")
+        handler.send_header("Content-Length", str(len(body)))
+        cors_headers(handler)
+        handler.end_headers()
+        handler.wfile.write(body)
+    except (BrokenPipeError, ConnectionResetError):
+        pass
 
 
 def read_json(handler: BaseHTTPRequestHandler) -> dict:
@@ -198,9 +207,16 @@ def require_api_key(handler: BaseHTTPRequestHandler) -> bool:
 
 def fetch_info(url: str, cookiefile: str | None = None) -> dict:
     opts = ydl_base_opts(cookiefile)
-    opts["skip_download"] = True
+    opts.update(
+        {
+            "skip_download": True,
+            "ignore_no_formats_error": True,
+            # Metadata only — don't require a specific stream
+            "format": "bestaudio/best/best*",
+        }
+    )
     with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+        info = ydl.extract_info(url, download=False) or {}
     return {
         "title": info.get("title") or "YouTube audio",
         "thumbnail": info.get("thumbnail"),
@@ -222,7 +238,8 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
     opts = ydl_base_opts(cookiefile)
     opts.update(
         {
-            "format": "bestaudio/best",
+            # Flexible fallbacks when YouTube hides some formats on datacenter IPs
+            "format": "bestaudio/bestaudio*/best/best*",
             "outtmpl": outtmpl,
             "keepvideo": False,
             "postprocessors": [
