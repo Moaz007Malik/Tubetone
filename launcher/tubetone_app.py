@@ -242,25 +242,27 @@ def run_gui() -> None:
         icon_candidates = []
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             meipass = Path(sys._MEIPASS)
-            icon_candidates.extend([meipass / "tubetone.ico", meipass / "icon.png"])
+            icon_candidates.extend(
+                [meipass / "tubetone.ico", meipass / "icon.png", APP_DIR / "tubetone.ico"]
+            )
         icon_candidates.extend(
             [
-                APP_DIR / "tubetone.ico",
                 Path(__file__).resolve().parent / "tubetone.ico",
-                APP_DIR / "icon.png",
+                APP_DIR / "tubetone.ico",
                 Path(__file__).resolve().parent.parent / "icon.png",
+                APP_DIR / "icon.png",
             ]
         )
         for icon_path in icon_candidates:
-            if icon_path.is_file():
-                if icon_path.suffix.lower() == ".ico":
-                    root.iconbitmap(default=str(icon_path))
-                try:
-                    img = tk.PhotoImage(file=str(icon_path if icon_path.suffix.lower() == ".png" else icon_path))
-                    root.iconphoto(True, img)
-                    root._icon_img = img  # keep reference
-                except Exception:
-                    pass
+            if not icon_path.is_file():
+                continue
+            if icon_path.suffix.lower() == ".ico":
+                root.iconbitmap(default=str(icon_path))
+                break
+            if icon_path.suffix.lower() == ".png":
+                img = tk.PhotoImage(file=str(icon_path))
+                root.iconphoto(True, img)
+                root._icon_img = img
                 break
     except Exception:
         pass
