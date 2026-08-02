@@ -14,8 +14,11 @@ python -m PyInstaller ^
   --clean ^
   --windowed ^
   --name TubeTone ^
+  --icon "tubetone.ico" ^
   --collect-all yt_dlp ^
   --add-data "..\server;server" ^
+  --add-data "tubetone.ico;." ^
+  --add-data "..\icon.png;." ^
   --paths "..\server" ^
   tubetone_app.py
 

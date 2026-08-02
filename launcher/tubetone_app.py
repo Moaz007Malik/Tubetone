@@ -237,6 +237,34 @@ def run_gui() -> None:
     root.minsize(640, 560)
     root.configure(bg=COLORS["bg"])
 
+    # Window / taskbar icon
+    try:
+        icon_candidates = []
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            meipass = Path(sys._MEIPASS)
+            icon_candidates.extend([meipass / "tubetone.ico", meipass / "icon.png"])
+        icon_candidates.extend(
+            [
+                APP_DIR / "tubetone.ico",
+                Path(__file__).resolve().parent / "tubetone.ico",
+                APP_DIR / "icon.png",
+                Path(__file__).resolve().parent.parent / "icon.png",
+            ]
+        )
+        for icon_path in icon_candidates:
+            if icon_path.is_file():
+                if icon_path.suffix.lower() == ".ico":
+                    root.iconbitmap(default=str(icon_path))
+                try:
+                    img = tk.PhotoImage(file=str(icon_path if icon_path.suffix.lower() == ".png" else icon_path))
+                    root.iconphoto(True, img)
+                    root._icon_img = img  # keep reference
+                except Exception:
+                    pass
+                break
+    except Exception:
+        pass
+
     style = ttk.Style()
     try:
         style.theme_use("clam")
