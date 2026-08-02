@@ -240,8 +240,8 @@ def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, cl
     opts = ydl_base_opts(cookiefile, clients)
     opts.update(
         {
-            # Audio-only formats — avoid full video (format 18/best) which spikes RAM
-            "format": "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio/140/251/250/249",
+            # Prefer audio-only; keep light progressive fallbacks for stubborn videos
+            "format": "bestaudio[ext=m4a]/bestaudio/140/251/250/249/18/bestaudio*/best*",
             "outtmpl": outtmpl,
             "keepvideo": False,
             "postprocessors": [
@@ -288,12 +288,14 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
         )
 
     work = Path(tempfile.mkdtemp(prefix="tubetone_", dir=str(DOWNLOAD_DIR)))
+    env_cookies = str(COOKIES_PATH) if COOKIES_PATH else None
+    primary = cookiefile or env_cookies
 
-    # Fewer attempts = less RAM thrashing on free tier
+    # Try logged-in clients first (needed on Render), then guest fallbacks
     attempts: list[tuple[list[str], str | None]] = [
-        (["web_embedded", "android"], cookiefile or None),
+        (["mweb", "web"], primary),
+        (["web_embedded", "android"], primary),
         (["web_embedded", "android"], None),
-        (["mweb", "web"], cookiefile),
     ]
 
     errors: list[str] = []

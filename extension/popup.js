@@ -380,7 +380,7 @@ function renderQueue() {
     `;
     li.querySelector(".qi-title").textContent = item.title;
     const st = li.querySelector(".qi-status");
-    st.textContent = statusLabel(item.status);
+    st.textContent = statusLabel(item.status, item.error);
     st.classList.add(item.status);
     li.querySelector(".qi-remove").addEventListener("click", async () => {
       queue.splice(index, 1);
@@ -391,14 +391,14 @@ function renderQueue() {
   });
 }
 
-function statusLabel(status) {
+function statusLabel(status, error) {
   switch (status) {
     case "downloading":
       return "Downloading…";
     case "done":
       return "Done";
     case "error":
-      return "Failed";
+      return error ? `Failed: ${String(error).slice(0, 80)}` : "Failed";
     default:
       return "Queued";
   }
@@ -449,15 +449,25 @@ async function requestDownload(video, bitrate) {
       signal: AbortSignal.timeout(300000),
     });
   } catch (err) {
+    const msg = String(err?.message || err);
+    if (/abort|timeout/i.test(msg)) {
+      throw new Error("Timed out — song too long or Render is too slow/out of memory");
+    }
     throw new Error(
-      "Download interrupted — Render may have run out of memory. Try 128 kbps, or use the local server."
+      "Download interrupted — Render may have restarted (memory limit). Try 128 kbps or local server."
     );
   }
 
   const type = res.headers.get("Content-Type") || "";
   if (!res.ok) {
-    const data = type.includes("json") ? await res.json().catch(() => ({})) : {};
-    throw new Error(data.error || `Download failed (${res.status})`);
+    let data = {};
+    try {
+      data = type.includes("json") ? await res.json() : { error: await res.text() };
+    } catch {
+      data = {};
+    }
+    const raw = data.error || `Download failed (${res.status})`;
+    throw new Error(String(raw).replace(/^ERROR:\s*/i, "").slice(0, 240));
   }
 
   if (type.includes("json")) {
@@ -509,16 +519,20 @@ async function downloadAll() {
   updateBusyState();
   const bitrate = els.bulkBitrate.value;
   let okCount = 0;
+  let lastError = "";
 
   for (let i = 0; i < queue.length; i++) {
     queue[i].status = "downloading";
+    queue[i].error = "";
     renderQueue();
     try {
       await requestDownload(queue[i], bitrate);
       queue[i].status = "done";
       okCount += 1;
-    } catch {
+    } catch (err) {
       queue[i].status = "error";
+      queue[i].error = err.message || "Failed";
+      lastError = queue[i].error;
     }
     await saveQueue();
     renderQueue();
@@ -526,7 +540,12 @@ async function downloadAll() {
 
   busy = false;
   updateBusyState();
-  showToast(`Finished: ${okCount}/${queue.length} downloaded`, okCount ? "ok" : "error");
+  if (okCount) {
+    showToast(`Finished: ${okCount}/${queue.length} downloaded`, "ok");
+  } else {
+    const short = (lastError || "Download failed").replace(/\s+/g, " ").slice(0, 160);
+    showToast(`Finished 0/${queue.length}: ${short}`, "error");
+  }
 }
 
 function updateBusyState() {
@@ -544,5 +563,5 @@ function showToast(message, type = "") {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => {
     els.toast.hidden = true;
-  }, 3500);
+  }, type === "error" ? 8000 : 3500);
 }
