@@ -41,9 +41,10 @@ async function init() {
   await loadQueue();
   await restoreBitrates();
   renderQueue();
-  await checkServer();
-  await loadCurrentTab();
   bindEvents();
+  // Show the current tab immediately — don't wait on Render/yt-dlp
+  await loadCurrentTab();
+  checkServer(); // background
   setInterval(checkServer, 8000);
 }
 
@@ -187,6 +188,7 @@ async function fetchVideoInfo(url) {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ url, cookies }),
+    signal: AbortSignal.timeout(45000),
   });
   if (!res.ok) return null;
   return res.json();
@@ -195,7 +197,7 @@ async function fetchVideoInfo(url) {
 async function checkServer() {
   try {
     const res = await fetch(`${serverBase()}/health`, {
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(3000),
     });
     const ok = res.ok;
     els.serverStatus.classList.toggle("online", ok);
@@ -254,22 +256,30 @@ async function loadCurrentTab() {
   }
 
   const id = videoIdFromUrl(url);
-  let title = tab.title?.replace(/\s*-\s*YouTube\s*$/i, "").trim() || "YouTube video";
-  let thumb = id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
+  const title = tab.title?.replace(/\s*-\s*YouTube\s*$/i, "").trim() || "YouTube video";
+  const thumb = id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
 
-  try {
-    if (await checkServer()) {
-      const info = await fetchVideoInfo(url);
-      if (info) {
-        title = info.title || title;
-        thumb = info.thumbnail || thumb;
-      }
-    }
-  } catch {
-    /* fallback */
-  }
-
+  // Paint UI from the tab right away (fast even when Render is online)
   setCurrent({ id, url, title, thumb, status: "queued" });
+
+  // Optional title refresh from server — never blocks the popup
+  enrichCurrentFromServer(url);
+}
+
+async function enrichCurrentFromServer(url) {
+  try {
+    const online = await checkServer();
+    if (!online) return;
+    const info = await fetchVideoInfo(url);
+    if (!info || !current || current.url !== url) return;
+    setCurrent({
+      ...current,
+      title: info.title || current.title,
+      thumb: info.thumbnail || current.thumb,
+    });
+  } catch {
+    /* keep tab title */
+  }
 }
 
 function setCurrent(video) {
@@ -310,23 +320,30 @@ async function addManualUrl() {
     return;
   }
   const id = videoIdFromUrl(url);
-  let title = `Video ${id || ""}`.trim();
-  let thumb = id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
-
-  try {
-    if (await checkServer()) {
-      const info = await fetchVideoInfo(url);
-      if (info) {
-        title = info.title || title;
-        thumb = info.thumbnail || thumb;
-      }
-    }
-  } catch {
-    /* fallback */
-  }
+  const title = `Video ${id || ""}`.trim();
+  const thumb = id ? `https://i.ytimg.com/vi/${id}/mqdefault.jpg` : null;
 
   addToQueue({ id, url, title, thumb, status: "queued" });
   els.manualUrl.value = "";
+
+  // Refresh title in the background (don't block Add)
+  enrichQueueItemFromServer(url);
+}
+
+async function enrichQueueItemFromServer(url) {
+  try {
+    if (!(await checkServer())) return;
+    const info = await fetchVideoInfo(url);
+    if (!info?.title) return;
+    const item = queue.find((q) => q.url === url);
+    if (!item) return;
+    item.title = info.title;
+    if (info.thumbnail) item.thumb = info.thumbnail;
+    await saveQueue();
+    renderQueue();
+  } catch {
+    /* keep placeholder title */
+  }
 }
 
 function addToQueue(video) {
