@@ -1,41 +1,28 @@
-# TubeTone — YouTube MP3 Chrome Extension
+# TubeTone — YouTube → MP3
 
-Download YouTube audio as MP3 with bitrate selection and a bulk queue.
+Standalone Windows app (recommended) or optional Chrome extension.
 
-Uses a companion server with [yt-dlp](https://github.com/yt-dlp/yt-dlp) + **ffmpeg**.  
-Works **locally** or on **Render** (free Docker web service).
+Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) + **ffmpeg** on your PC.
 
-> **Not Vercel** — serverless hosts can't run ffmpeg or long downloads. Render (or any Docker VPS) can.
+## Share with a friend (Windows .exe) — recommended
 
-## Features
-
-- Bitrate: **64 / 128 / 192 / 256 / 320 kbps**
-- Current-tab download + bulk queue
-- Local server or remote Render URL + API key
-- MP3s save to your browser **Downloads/TubeTone** folder
-
----
-
-## Share with a friend (Windows .exe)
-
-Build a portable app your friend can run **without Python or Render**:
+Paste YouTube links and download MP3s. **No Chrome extension.**
 
 ```bat
 cd launcher
 build.bat
 ```
 
-That creates `release/TubeTone/` containing:
+Creates `release/TubeTone/`:
 
-- `TubeTone.exe` — auto-installs ffmpeg on first run + starts the local server  
-- `extension/` — Load unpacked in Chrome  
-- `README.txt` — setup steps for your friend  
+- `TubeTone.exe` — paste links, pick bitrate/folder, download  
+- `README.txt` — short instructions  
 
-Zip the `TubeTone` folder and send it. They double-click `TubeTone.exe`, load the extension, done.
-
-Local use is far more reliable than Render (no bot/IP/memory limits).
+Zip that folder and send it. First run may download ffmpeg once.
 
 ---
+
+## Optional: Chrome extension + local server
 
 1. Install **ffmpeg** and keep it on PATH (or at `C:\ffmpeg\bin`)
 2. Double-click `start-server.bat` (or `python server/server.py`)

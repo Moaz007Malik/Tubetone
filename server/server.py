@@ -235,7 +235,14 @@ def fetch_info(url: str, cookiefile: str | None = None) -> dict:
     }
 
 
-def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, clients: list[str]) -> dict:
+def _run_download(
+    url: str,
+    bitrate: int,
+    work: Path,
+    cookiefile: str | None,
+    clients: list[str],
+    progress_hooks: list | None = None,
+) -> dict:
     outtmpl = str(work / "%(title)s [%(id)s].%(ext)s")
     opts = ydl_base_opts(cookiefile, clients)
     opts.update(
@@ -253,6 +260,8 @@ def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, cl
             ],
         }
     )
+    if progress_hooks:
+        opts["progress_hooks"] = progress_hooks
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
         title = info.get("title") or "audio"
@@ -279,7 +288,12 @@ def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, cl
     }
 
 
-def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
+def download_mp3(
+    url: str,
+    bitrate: int,
+    cookiefile: str | None = None,
+    progress_hooks: list | None = None,
+) -> dict:
     if bitrate not in ALLOWED_BITRATES:
         raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
     if not FFMPEG_LOCATION:
@@ -302,7 +316,9 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
     with _download_lock:
         for clients, cookies in attempts:
             try:
-                return _run_download(url, bitrate, work, cookies, clients)
+                return _run_download(
+                    url, bitrate, work, cookies, clients, progress_hooks
+                )
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{'+'.join(clients)}: {exc}")
                 # Clear partial downloads between attempts
