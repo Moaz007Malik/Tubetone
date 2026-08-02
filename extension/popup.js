@@ -266,7 +266,20 @@ function authHeaders(extra = {}) {
 }
 
 function serverBase() {
-  return config.serverUrl.replace(/\/$/, "");
+  // Always prefer what's currently in the settings field (even before Save)
+  const typed = (els.serverUrl?.value || "").trim().replace(/\/$/, "");
+  if (typed) {
+    config.serverUrl = typed;
+    return typed;
+  }
+  return (config.serverUrl || DEFAULT_SERVER).replace(/\/$/, "");
+}
+
+function syncSettingsFromForm() {
+  config.serverUrl = (els.serverUrl.value || DEFAULT_SERVER).trim().replace(/\/$/, "") || DEFAULT_SERVER;
+  config.apiKey = els.apiKey.value.trim();
+  config.sendCookies = els.sendCookies.checked;
+  config.saveMode = els.saveMode.value;
 }
 
 /** Export YouTube (+ related) cookies as Netscape cookies.txt for yt-dlp. */
@@ -323,9 +336,10 @@ async function fetchVideoInfo(url) {
 }
 
 async function checkServer() {
+  syncSettingsFromForm();
   try {
     const res = await fetch(`${serverBase()}/health`, {
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(5000),
     });
     const ok = res.ok;
     els.serverStatus.classList.toggle("online", ok);
