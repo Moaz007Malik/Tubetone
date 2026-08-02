@@ -118,6 +118,10 @@ def ydl_base_opts(cookiefile: str | None = None, player_clients: list[str] | Non
         "noplaylist": True,
         "remote_components": {"ejs:github"},
         "js_runtimes": {"node": {}},
+        # Keep RAM low on Render free (512MB)
+        "concurrent_fragment_downloads": 1,
+        "buffersize": 16 * 1024,
+        "http_chunk_size": 1_048_576,
         "extractor_args": {
             "youtube": {
                 "player_client": clients,
@@ -125,6 +129,9 @@ def ydl_base_opts(cookiefile: str | None = None, player_clients: list[str] | Non
             "youtubepot-bgutilhttp": {
                 "base_url": [os.environ.get("POT_BASE_URL", "http://127.0.0.1:4416")],
             },
+        },
+        "postprocessor_args": {
+            "ffmpeg": ["-threads", "1"],
         },
     }
     if FFMPEG_LOCATION:
@@ -233,7 +240,8 @@ def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, cl
     opts = ydl_base_opts(cookiefile, clients)
     opts.update(
         {
-            "format": "bestaudio[ext=m4a]/bestaudio/140/251/250/249/18/best/best*",
+            # Audio-only formats — avoid full video (format 18/best) which spikes RAM
+            "format": "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio/140/251/250/249",
             "outtmpl": outtmpl,
             "keepvideo": False,
             "postprocessors": [
@@ -281,13 +289,11 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
 
     work = Path(tempfile.mkdtemp(prefix="tubetone_", dir=str(DOWNLOAD_DIR)))
 
-    # Prefer clients that still return real stream URLs when web is SABR-gated
+    # Fewer attempts = less RAM thrashing on free tier
     attempts: list[tuple[list[str], str | None]] = [
+        (["web_embedded", "android"], cookiefile or None),
         (["web_embedded", "android"], None),
-        (["web_embedded", "android", "web"], cookiefile),
-        (["android"], None),
-        (["web", "web_safari"], cookiefile),
-        (["mweb", "tv"], cookiefile),
+        (["mweb", "web"], cookiefile),
     ]
 
     errors: list[str] = []
@@ -402,6 +408,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             bitrate = int(body.get("bitrate", 128))
+            # Cap bitrate on tiny instances to reduce ffmpeg RAM
+            if os.environ.get("RENDER") and bitrate > 192:
+                bitrate = 192
             mode = (body.get("mode") or "file").lower()
             result = download_mp3(url, bitrate, cookiefile)
             path = Path(result["path"])
@@ -421,11 +430,11 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
 
-            data = path.read_bytes()
+            size = path.stat().st_size
             ascii_name = re.sub(r"[^\w.\- ]+", "_", filename) or "audio.mp3"
             self.send_response(200)
             self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Content-Length", str(size))
             self.send_header(
                 "Content-Disposition",
                 f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote_filename(filename)}',
@@ -433,7 +442,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("X-Filename", ascii_name)
             cors_headers(self)
             self.end_headers()
-            self.wfile.write(data)
+            # Stream in chunks — never load the whole MP3 into RAM
+            with path.open("rb") as fh:
+                while True:
+                    chunk = fh.read(64 * 1024)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
         except Exception as exc:  # noqa: BLE001
             send_json(self, 500, {"error": str(exc)})
         finally:

@@ -435,16 +435,24 @@ function filenameFromResponse(res, fallback) {
 
 async function requestDownload(video, bitrate) {
   const cookies = await getYoutubeCookiesNetscape();
-  const res = await fetch(`${serverBase()}/download`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({
-      url: video.url,
-      bitrate: Number(bitrate),
-      mode: "file",
-      cookies,
-    }),
-  });
+  let res;
+  try {
+    res = await fetch(`${serverBase()}/download`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        url: video.url,
+        bitrate: Number(bitrate),
+        mode: "file",
+        cookies,
+      }),
+      signal: AbortSignal.timeout(300000),
+    });
+  } catch (err) {
+    throw new Error(
+      "Download interrupted — Render may have run out of memory. Try 128 kbps, or use the local server."
+    );
+  }
 
   const type = res.headers.get("Content-Type") || "";
   if (!res.ok) {
@@ -458,6 +466,9 @@ async function requestDownload(video, bitrate) {
   }
 
   const blob = await res.blob();
+  if (!blob.size) {
+    throw new Error("Empty file returned — download failed on server");
+  }
   const filename = filenameFromResponse(res, video.title);
   await saveMp3Blob(blob, filename);
   return filename;

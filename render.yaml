@@ -13,3 +13,6 @@ services:
         value: /tmp/tubetone
       - key: PYTHONUNBUFFERED
         value: "1"
+      # Keep 0 on free tier — Node POT provider causes OOM kills
+      - key: ENABLE_BGUTIL
+        value: "0"
