@@ -39,6 +39,18 @@
           <input id="sendCookies" type="checkbox" checked />
           <span>Send YouTube cookies to server (fixes bot check)</span>
         </label>
+        <label class="field">
+          <span>Save location</span>
+          <select id="saveMode">
+            <option value="downloads">Downloads / TubeTone</option>
+            <option value="ask">Ask every time</option>
+            <option value="folder">Custom folder…</option>
+          </select>
+        </label>
+        <div id="folderRow" class="folder-row" hidden>
+          <div id="folderLabel" class="folder-label">No folder selected</div>
+          <button id="pickFolder" class="btn secondary small" type="button">Choose folder</button>
+        </div>
         <button id="saveSettings" class="btn secondary" type="button">Save</button>
       </div>
     </section>
@@ -106,7 +118,7 @@
 
     <div id="toast" class="toast" hidden></div>
     <footer class="footer">
-      Local or Render server · MP3s save via browser Downloads
+      Local or Render server · Choose save folder in settings
     </footer>
   </div>
   <script src="popup.js"></script>

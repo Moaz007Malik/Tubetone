@@ -10,6 +10,10 @@ const els = {
   serverUrl: document.getElementById("serverUrl"),
   apiKey: document.getElementById("apiKey"),
   sendCookies: document.getElementById("sendCookies"),
+  saveMode: document.getElementById("saveMode"),
+  folderRow: document.getElementById("folderRow"),
+  folderLabel: document.getElementById("folderLabel"),
+  pickFolder: document.getElementById("pickFolder"),
   saveSettings: document.getElementById("saveSettings"),
   videoMeta: document.getElementById("videoMeta"),
   thumb: document.getElementById("thumb"),
@@ -29,10 +33,17 @@ const els = {
   toast: document.getElementById("toast"),
 };
 
-let config = { serverUrl: DEFAULT_SERVER, apiKey: "", sendCookies: true };
+let config = {
+  serverUrl: DEFAULT_SERVER,
+  apiKey: "",
+  sendCookies: true,
+  saveMode: "downloads", // downloads | ask | folder
+  folderName: "",
+};
 let current = null;
 let queue = [];
 let busy = false;
+let dirHandle = null;
 
 init();
 
@@ -58,12 +69,25 @@ function bindEvents() {
   els.saveSettings.addEventListener("click", async () => {
     const url = els.serverUrl.value.trim().replace(/\/$/, "") || DEFAULT_SERVER;
     const key = els.apiKey.value.trim();
+    const saveMode = els.saveMode.value;
+    if (saveMode === "folder" && !dirHandle) {
+      showToast("Choose a folder first", "error");
+      return;
+    }
     config = {
       serverUrl: url,
       apiKey: key,
       sendCookies: els.sendCookies.checked,
+      saveMode,
+      folderName: config.folderName,
     };
-    await chrome.storage.local.set(config);
+    await chrome.storage.local.set({
+      serverUrl: config.serverUrl,
+      apiKey: config.apiKey,
+      sendCookies: config.sendCookies,
+      saveMode: config.saveMode,
+      folderName: config.folderName,
+    });
     if (url.startsWith("https://") && !url.includes("onrender.com")) {
       try {
         await chrome.permissions.request({ origins: [`${new URL(url).origin}/*`] });
@@ -73,6 +97,31 @@ function bindEvents() {
     }
     showToast("Settings saved", "ok");
     await checkServer();
+  });
+
+  els.saveMode.addEventListener("change", () => {
+    updateFolderRowVisibility();
+  });
+
+  els.pickFolder.addEventListener("click", async () => {
+    try {
+      const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+      dirHandle = handle;
+      config.folderName = handle.name;
+      config.saveMode = "folder";
+      els.saveMode.value = "folder";
+      await idbSetDirHandle(handle);
+      await chrome.storage.local.set({
+        saveMode: "folder",
+        folderName: handle.name,
+      });
+      updateFolderRowVisibility();
+      showToast(`Folder set: ${handle.name}`, "ok");
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        showToast("Could not select folder", "error");
+      }
+    }
   });
 
   els.addToQueue.addEventListener("click", () => {
@@ -107,13 +156,92 @@ function bindEvents() {
 }
 
 async function loadConfig() {
-  const data = await chrome.storage.local.get(["serverUrl", "apiKey", "sendCookies"]);
+  const data = await chrome.storage.local.get([
+    "serverUrl",
+    "apiKey",
+    "sendCookies",
+    "saveMode",
+    "folderName",
+  ]);
   config.serverUrl = (data.serverUrl || DEFAULT_SERVER).replace(/\/$/, "");
   config.apiKey = data.apiKey || "";
   config.sendCookies = data.sendCookies !== false;
+  config.saveMode = data.saveMode || "downloads";
+  config.folderName = data.folderName || "";
   els.serverUrl.value = config.serverUrl;
   els.apiKey.value = config.apiKey;
   els.sendCookies.checked = config.sendCookies;
+  els.saveMode.value = config.saveMode;
+  dirHandle = await idbGetDirHandle();
+  updateFolderRowVisibility();
+}
+
+function updateFolderRowVisibility() {
+  const mode = els.saveMode.value;
+  els.folderRow.hidden = mode !== "folder";
+  if (mode === "folder") {
+    els.folderLabel.textContent = dirHandle
+      ? `Selected: ${dirHandle.name}`
+      : config.folderName
+        ? `Re-select folder “${config.folderName}” (permission needed)`
+        : "No folder selected";
+  }
+}
+
+/* ---- IndexedDB for FileSystemDirectoryHandle ---- */
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("tubetone", 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("handles")) {
+        db.createObjectStore("handles");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSetDirHandle(handle) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("handles", "readwrite");
+    tx.objectStore("handles").put(handle, "downloadDir");
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbGetDirHandle() {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction("handles", "readonly");
+      const req = tx.objectStore("handles").get("downloadDir");
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function ensureDirPermission() {
+  if (!dirHandle) {
+    dirHandle = await idbGetDirHandle();
+  }
+  if (!dirHandle) {
+    throw new Error("No folder selected — open settings and choose a folder");
+  }
+  let perm = await dirHandle.queryPermission({ mode: "readwrite" });
+  if (perm !== "granted") {
+    perm = await dirHandle.requestPermission({ mode: "readwrite" });
+  }
+  if (perm !== "granted") {
+    throw new Error("Folder permission denied — choose the folder again");
+  }
+  return dirHandle;
 }
 
 async function restoreBitrates() {
@@ -405,12 +533,23 @@ function statusLabel(status, error) {
 }
 
 async function saveMp3Blob(blob, filename) {
+  const mode = config.saveMode || "downloads";
+
+  if (mode === "folder") {
+    const dir = await ensureDirPermission();
+    const file = await dir.getFileHandle(filename, { create: true });
+    const writable = await file.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return;
+  }
+
   const url = URL.createObjectURL(blob);
   try {
     await chrome.downloads.download({
       url,
-      filename: `TubeTone/${filename}`,
-      saveAs: false,
+      filename: mode === "ask" ? filename : `TubeTone/${filename}`,
+      saveAs: mode === "ask",
     });
   } finally {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);

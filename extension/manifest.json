@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube MP3 Downloader",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Download YouTube audio as MP3 with bitrate selection and bulk queue. Works with local or Render companion server.",
   "permissions": ["activeTab", "storage", "tabs", "downloads", "cookies"],
   "host_permissions": [
