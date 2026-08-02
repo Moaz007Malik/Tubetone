@@ -57,10 +57,27 @@ Create a repo and upload the `youtube-mp3-downloader` folder contents (including
 | --- | --- |
 | Cold start | First request after idle (~15 min) can take 30–60s |
 | Timeouts | Long songs / slow conversion may fail on free plan |
-| YouTube blocks | Datacenter IPs are often blocked; downloads may error |
+| YouTube bot check | Datacenter IPs get blocked — fix with cookies (below) |
 | Sleep | Free web services spin down when idle |
 
 If Render fails often, local mode (Option A) is more reliable.
+
+### Fix “Sign in to confirm you’re not a bot”
+
+YouTube blocks Render’s IP unless yt-dlp sends **your** logged-in cookies.
+
+1. On your PC, install a cookies export extension, e.g.  
+   [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+2. Open [youtube.com](https://www.youtube.com) while **logged in**
+3. Export cookies → save as `cookies.txt` (Netscape format)
+4. On Render → your service → **Environment** → Add:
+   - **Key:** `YTDLP_COOKIES`
+   - **Value:** paste the **entire** contents of `cookies.txt`
+5. Save (redeploy). Logs should show `cookies: /tmp/tubetone/cookies.txt`
+
+**Never commit `cookies.txt` to GitHub** — it can take over your Google account.
+
+**Local alternative (no file):** set env `COOKIES_FROM_BROWSER=chrome` before starting the server.
 
 ---
 
@@ -72,6 +89,7 @@ If Render fails often, local mode (Option A) is more reliable.
 - **Env vars:**
   - `API_KEY` = a long random secret (share only with friends)
   - `DOWNLOAD_DIR` = `/tmp/tubetone`
+  - `YTDLP_COOKIES` = full Netscape cookies.txt (fixes bot check)
 
 ---
 

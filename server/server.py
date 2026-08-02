@@ -72,6 +72,42 @@ def find_ffmpeg() -> str | None:
 
 
 FFMPEG_LOCATION = find_ffmpeg()
+COOKIES_PATH: Path | None = None
+COOKIES_FROM_BROWSER: tuple | None = None
+
+
+def setup_cookies() -> None:
+    """Configure yt-dlp cookies from env (needed when YouTube shows bot check)."""
+    global COOKIES_PATH, COOKIES_FROM_BROWSER
+
+    browser = os.environ.get("COOKIES_FROM_BROWSER", "").strip().lower()
+    if browser:
+        # Local only — Chrome/Edge/Firefox profile on the same machine
+        COOKIES_FROM_BROWSER = (browser,)
+        return
+
+    cookie_file = os.environ.get("COOKIES_FILE", "").strip()
+    if cookie_file and Path(cookie_file).is_file():
+        COOKIES_PATH = Path(cookie_file)
+        return
+
+    # Paste full Netscape cookies.txt into Render env var YTDLP_COOKIES
+    raw = os.environ.get("YTDLP_COOKIES", "").strip()
+    if raw:
+        path = DOWNLOAD_DIR / "cookies.txt"
+        # Support literal \n from single-line env paste
+        text = raw.replace("\\n", "\n")
+        path.write_text(text, encoding="utf-8")
+        COOKIES_PATH = path
+        return
+
+    # Local convenience: server/cookies.txt if present
+    local = Path(__file__).resolve().parent / "cookies.txt"
+    if local.is_file():
+        COOKIES_PATH = local
+
+
+setup_cookies()
 
 
 def ydl_base_opts() -> dict:
@@ -82,6 +118,10 @@ def ydl_base_opts() -> dict:
     }
     if FFMPEG_LOCATION:
         opts["ffmpeg_location"] = FFMPEG_LOCATION
+    if COOKIES_PATH:
+        opts["cookiefile"] = str(COOKIES_PATH)
+    if COOKIES_FROM_BROWSER:
+        opts["cookiesfrombrowser"] = COOKIES_FROM_BROWSER
     return opts
 
 
@@ -226,17 +266,31 @@ class Handler(BaseHTTPRequestHandler):
         cors_headers(self)
         self.end_headers()
 
+    def do_HEAD(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path in ("/", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            cors_headers(self)
+            self.end_headers()
+            return
+        self.send_response(404)
+        cors_headers(self)
+        self.end_headers()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/health":
+        if parsed.path in ("/", "/health"):
             send_json(
                 self,
                 200,
                 {
                     "ok": True,
+                    "service": "TubeTone",
                     "download_dir": str(DOWNLOAD_DIR),
                     "ffmpeg": FFMPEG_LOCATION,
                     "auth_required": bool(API_KEY),
+                    "cookies": bool(COOKIES_PATH or COOKIES_FROM_BROWSER),
                 },
             )
             return
@@ -334,6 +388,13 @@ def main() -> None:
         print("  API key auth: enabled")
     else:
         print("  API key auth: disabled (set API_KEY on Render)")
+    if COOKIES_FROM_BROWSER:
+        print(f"  cookies: from browser ({COOKIES_FROM_BROWSER[0]})")
+    elif COOKIES_PATH:
+        print(f"  cookies: {COOKIES_PATH}")
+    else:
+        print("  cookies: none (YouTube may show bot check on Render)")
+        print("  Set YTDLP_COOKIES env on Render — see README")
     print("=" * 56)
     try:
         server.serve_forever()
