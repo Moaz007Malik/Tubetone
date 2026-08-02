@@ -3,7 +3,10 @@ FROM brainicism/bgutil-ytdlp-pot-provider:1.3.1 AS pot
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+  && apt-get install -y --no-install-recommends \
+       ffmpeg \
+       ca-certificates \
+       libatomic1 \
   && rm -rf /var/lib/apt/lists/*
 
 # Use the same Node runtime the POT provider was built for (v25),
