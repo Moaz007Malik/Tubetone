@@ -1,47 +1,22 @@
-TubeTone — share with a friend (Windows)
-========================================
+TubeTone — YouTube to MP3 (Windows)
+===================================
 
-WHAT THIS IS
-  A Chrome extension + a small local app that converts YouTube
-  videos to MP3 on YOUR computer (no Render / cloud needed).
+Just run TubeTone.exe — no Chrome extension needed.
 
-REQUIREMENTS
-  - Windows 10/11
-  - Google Chrome (or Edge)
-  - Internet connection (first run downloads ffmpeg ~80 MB once)
-
-SETUP (about 2 minutes)
-  1. Unzip this folder anywhere (e.g. Desktop\TubeTone)
+SETUP
+  1. Unzip this folder anywhere
   2. Double-click TubeTone.exe
-       - First run may download ffmpeg automatically — wait for "Ready"
-       - Leave the TubeTone window OPEN while downloading songs
-  3. In the TubeTone window click "Open Chrome extensions"
-       Or go to:  chrome://extensions
-  4. Turn ON "Developer mode" (top-right)
-  5. Click "Load unpacked"
-  6. Select the "extension" folder inside this TubeTone folder
-  7. Open any YouTube video → click the TubeTone icon
-  8. Pick bitrate → Download  (or add songs to the bulk queue)
+  3. First run may download ffmpeg (~80 MB) once — wait until it says Ready
 
-SAVE LOCATION
-  In the extension: Server settings → Save location
-    - Downloads / TubeTone   (default)
-    - Ask every time
-    - Custom folder
+DOWNLOAD
+  1. Paste a YouTube link (or several links, one per line)
+  2. Choose bitrate (64 / 128 / 192 / 256 / 320)
+  3. Choose save folder (default: Downloads\TubeTone)
+  4. Click "Download MP3"
 
-SERVER SETTINGS IN THE EXTENSION
-  Server URL should be:  http://127.0.0.1:8765
-  API key: leave empty for local use
-  "Send YouTube cookies" — keep checked if a download asks for sign-in
+TIPS
+  - Keep TubeTone.exe open while downloading
+  - If Windows SmartScreen appears: More info → Run anyway
+  - Log file: %LOCALAPPDATA%\TubeTone\launcher.log
 
-TROUBLESHOOTING
-  - Extension shows Offline → make sure TubeTone.exe is running
-  - Windows SmartScreen warning → More info → Run anyway
-    (unsigned app; normal for a personal share)
-  - First-run ffmpeg download fails → install ffmpeg manually
-    from https://www.gyan.dev/ffmpeg/builds/ and restart TubeTone.exe
-  - Log file:  %LOCALAPPDATA%\TubeTone\launcher.log
-
-PRIVACY
-  Everything runs on this PC. Nothing is uploaded to our servers.
-  Only download content you have the right to use.
+Only download content you have the right to use.

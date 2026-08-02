@@ -333,7 +333,17 @@ def cleanup_work(result: dict) -> None:
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
-        sys.stdout.write("[server] " + (fmt % args) + "\n")
+        # Windowed .exe has sys.stdout/stderr = None — never write blindly
+        try:
+            stream = sys.stdout or sys.stderr
+            if stream is not None:
+                stream.write("[server] " + (fmt % args) + "\n")
+                stream.flush()
+        except Exception:
+            pass
+
+    def log_error(self, fmt: str, *args) -> None:
+        self.log_message(fmt, *args)
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)
