@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: tubetone
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: API_KEY
+        generateValue: true
+      - key: DOWNLOAD_DIR
+        value: /tmp/tubetone
+      - key: PYTHONUNBUFFERED
+        value: "1"

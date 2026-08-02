@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube MP3</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>TubeTone</h1>
+          <p class="tagline">MP3 from YouTube</p>
+        </div>
+      </div>
+      <div id="serverStatus" class="status offline" title="Companion server status">
+        <span class="dot"></span>
+        <span id="serverStatusText">Offline</span>
+      </div>
+    </header>
+
+    <section class="card settings">
+      <button id="toggleSettings" class="settings-toggle" type="button">
+        Server settings ▾
+      </button>
+      <div id="settingsPanel" class="settings-panel" hidden>
+        <label class="field">
+          <span>Server URL</span>
+          <input id="serverUrl" type="url" placeholder="http://127.0.0.1:8765 or https://….onrender.com" />
+        </label>
+        <label class="field">
+          <span>API key (Render)</span>
+          <input id="apiKey" type="password" placeholder="Paste API_KEY from Render" autocomplete="off" />
+        </label>
+        <button id="saveSettings" class="btn secondary" type="button">Save</button>
+      </div>
+    </section>
+
+    <section class="card current">
+      <div class="section-label">Current video</div>
+      <div id="videoMeta" class="video-meta empty">
+        <div class="thumb-wrap">
+          <img id="thumb" alt="" hidden />
+          <div id="thumbPlaceholder" class="thumb-placeholder">No video</div>
+        </div>
+        <div class="meta-text">
+          <div id="videoTitle" class="title">Open a YouTube video</div>
+          <div id="videoUrl" class="url"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <label class="field">
+          <span>Bitrate</span>
+          <select id="bitrate">
+            <option value="64">64 kbps</option>
+            <option value="128" selected>128 kbps</option>
+            <option value="192">192 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320">320 kbps</option>
+          </select>
+        </label>
+        <div class="btn-row">
+          <button id="addToQueue" class="btn secondary" disabled>Add to queue</button>
+          <button id="downloadNow" class="btn primary" disabled>Download</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card queue">
+      <div class="queue-head">
+        <div class="section-label">Bulk queue <span id="queueCount" class="count">0</span></div>
+        <div class="queue-actions">
+          <button id="clearQueue" class="link-btn" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div class="add-manual">
+        <input id="manualUrl" type="url" placeholder="Paste YouTube URL to add…" />
+        <button id="addManual" class="btn secondary small" type="button">Add</button>
+      </div>
+
+      <ul id="queueList" class="queue-list"></ul>
+
+      <div class="bulk-bar">
+        <label class="field compact">
+          <span>Queue bitrate</span>
+          <select id="bulkBitrate">
+            <option value="64">64 kbps</option>
+            <option value="128" selected>128 kbps</option>
+            <option value="192">192 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320">320 kbps</option>
+          </select>
+        </label>
+        <button id="downloadAll" class="btn primary" disabled>Download all</button>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" hidden></div>
+    <footer class="footer">
+      Local or Render server · MP3s save via browser Downloads
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
