@@ -110,21 +110,25 @@ def setup_cookies() -> None:
 setup_cookies()
 
 
-def ydl_base_opts(cookiefile: str | None = None) -> dict:
+def ydl_base_opts(cookiefile: str | None = None, player_clients: list[str] | None = None) -> dict:
+    clients = player_clients or ["web_embedded", "android", "web", "web_safari"]
     opts: dict = {
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        # Android/iOS clients often expose audio formats when web is restricted
+        "remote_components": {"ejs:github"},
+        "js_runtimes": {"node": {}},
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "ios", "web"],
-            }
+                "player_client": clients,
+            },
+            "youtubepot-bgutilhttp": {
+                "base_url": [os.environ.get("POT_BASE_URL", "http://127.0.0.1:4416")],
+            },
         },
     }
     if FFMPEG_LOCATION:
         opts["ffmpeg_location"] = FFMPEG_LOCATION
-    # Per-request cookies from the extension take priority
     if cookiefile:
         opts["cookiefile"] = cookiefile
     elif COOKIES_PATH:
@@ -211,7 +215,6 @@ def fetch_info(url: str, cookiefile: str | None = None) -> dict:
         {
             "skip_download": True,
             "ignore_no_formats_error": True,
-            # Metadata only — don't require a specific stream
             "format": "bestaudio/best/best*",
         }
     )
@@ -225,21 +228,12 @@ def fetch_info(url: str, cookiefile: str | None = None) -> dict:
     }
 
 
-def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
-    if bitrate not in ALLOWED_BITRATES:
-        raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
-    if not FFMPEG_LOCATION:
-        raise RuntimeError(
-            "ffmpeg/ffprobe not found. Install ffmpeg or set FFMPEG_LOCATION."
-        )
-
-    work = Path(tempfile.mkdtemp(prefix="tubetone_", dir=str(DOWNLOAD_DIR)))
+def _run_download(url: str, bitrate: int, work: Path, cookiefile: str | None, clients: list[str]) -> dict:
     outtmpl = str(work / "%(title)s [%(id)s].%(ext)s")
-    opts = ydl_base_opts(cookiefile)
+    opts = ydl_base_opts(cookiefile, clients)
     opts.update(
         {
-            # Flexible fallbacks when YouTube hides some formats on datacenter IPs
-            "format": "bestaudio/bestaudio*/best/best*",
+            "format": "bestaudio[ext=m4a]/bestaudio/140/251/250/249/18/best/best*",
             "outtmpl": outtmpl,
             "keepvideo": False,
             "postprocessors": [
@@ -251,24 +245,21 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
             ],
         }
     )
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        title = info.get("title") or "audio"
+        video_id = info.get("id") or "unknown"
+        filename = f"{sanitize_filename(title)} [{video_id}].mp3"
 
-    with _download_lock:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get("title") or "audio"
-            video_id = info.get("id") or "unknown"
-            filename = f"{sanitize_filename(title)} [{video_id}].mp3"
-
-            requested = Path(ydl.prepare_filename(info)).with_suffix(".mp3")
-            matches = list(work.glob("*.mp3"))
-            if requested.exists():
-                path = requested
-            elif matches:
-                path = max(matches, key=lambda p: p.stat().st_mtime)
-            else:
-                raise RuntimeError("MP3 was not created (ffmpeg conversion failed)")
-
-            filename = path.name
+        requested = Path(ydl.prepare_filename(info)).with_suffix(".mp3")
+        matches = list(work.glob("*.mp3"))
+        if requested.exists():
+            path = requested
+        elif matches:
+            path = max(matches, key=lambda p: p.stat().st_mtime)
+        else:
+            raise RuntimeError("MP3 was not created (ffmpeg conversion failed)")
+        filename = path.name
 
     return {
         "ok": True,
@@ -278,6 +269,45 @@ def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
         "bitrate": bitrate,
         "title": title,
     }
+
+
+def download_mp3(url: str, bitrate: int, cookiefile: str | None = None) -> dict:
+    if bitrate not in ALLOWED_BITRATES:
+        raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
+    if not FFMPEG_LOCATION:
+        raise RuntimeError(
+            "ffmpeg/ffprobe not found. Install ffmpeg or set FFMPEG_LOCATION."
+        )
+
+    work = Path(tempfile.mkdtemp(prefix="tubetone_", dir=str(DOWNLOAD_DIR)))
+
+    # Prefer clients that still return real stream URLs when web is SABR-gated
+    attempts: list[tuple[list[str], str | None]] = [
+        (["web_embedded", "android"], None),
+        (["web_embedded", "android", "web"], cookiefile),
+        (["android"], None),
+        (["web", "web_safari"], cookiefile),
+        (["mweb", "tv"], cookiefile),
+    ]
+
+    errors: list[str] = []
+    with _download_lock:
+        for clients, cookies in attempts:
+            try:
+                return _run_download(url, bitrate, work, cookies, clients)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{'+'.join(clients)}: {exc}")
+                # Clear partial downloads between attempts
+                for f in work.glob("*"):
+                    if f.is_file() and f.suffix != ".txt":
+                        f.unlink(missing_ok=True)
+
+    detail = " | ".join(errors[-3:])
+    raise RuntimeError(
+        "YouTube blocked format access on this server IP. "
+        "Use the local companion server, or ensure bgutil POT is running. "
+        f"Details: {detail}"
+    )
 
 
 def cleanup_work(result: dict) -> None:

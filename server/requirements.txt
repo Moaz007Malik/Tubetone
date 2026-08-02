@@ -1,1 +1,2 @@
 yt-dlp>=2026.3.3
+bgutil-ytdlp-pot-provider>=1.2.2
