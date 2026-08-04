@@ -98,50 +98,146 @@ class Atmosphere(tk.Canvas):
         self.create_oval(cx - r, cy - r, cx + r, cy + r, outline="", fill=color)
 
 
+class ScrollFrame(tk.Frame):
+    """Vertically scrollable container — scrollbar appears when content overflows."""
+
+    def __init__(self, master: tk.Misc, bg: str | None = None, **kw):
+        bg = bg or G["bg_deep"]
+        super().__init__(master, bg=bg, **kw)
+        self._bg = bg
+        self._canvas = tk.Canvas(self, bg=bg, highlightthickness=0, bd=0)
+        self._vsb = ttk.Scrollbar(self, orient="vertical", command=self._canvas.yview)
+        self._canvas.configure(yscrollcommand=self._on_scroll_set)
+        self._canvas.pack(side="left", fill="both", expand=True)
+        # scrollbar packed only when needed
+        self._sb_packed = False
+
+        self.interior = tk.Frame(self._canvas, bg=bg)
+        self._win_id = self._canvas.create_window((0, 0), window=self.interior, anchor="nw")
+
+        self.interior.bind("<Configure>", self._on_interior_configure)
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
+        for w in (self, self._canvas, self.interior):
+            w.bind("<Enter>", self._bind_mousewheel)
+            w.bind("<Leave>", self._unbind_mousewheel)
+
+    def _on_scroll_set(self, first: str, last: str) -> None:
+        self._vsb.set(first, last)
+        need = float(first) > 0.001 or float(last) < 0.999
+        if need and not self._sb_packed:
+            self._vsb.pack(side="right", fill="y")
+            self._sb_packed = True
+        elif not need and self._sb_packed:
+            self._vsb.pack_forget()
+            self._sb_packed = False
+
+    def _on_interior_configure(self, _e=None) -> None:
+        self._canvas.configure(scrollregion=self._canvas.bbox("all") or (0, 0, 0, 0))
+        # Re-sync scrollbar visibility
+        try:
+            first, last = self._canvas.yview()
+            self._on_scroll_set(str(first), str(last))
+        except tk.TclError:
+            pass
+
+    def _on_canvas_configure(self, event) -> None:
+        # Match interior width to viewport (responsive width)
+        self._canvas.itemconfigure(self._win_id, width=max(1, event.width))
+        self._canvas.configure(scrollregion=self._canvas.bbox("all") or (0, 0, 0, 0))
+
+    def _on_mousewheel(self, event) -> str | None:
+        # Only scroll if there is overflow
+        try:
+            first, last = self._canvas.yview()
+            if float(first) <= 0.0 and float(last) >= 1.0:
+                return None
+        except tk.TclError:
+            return None
+        if getattr(event, "num", None) == 4:  # Linux up
+            self._canvas.yview_scroll(-3, "units")
+        elif getattr(event, "num", None) == 5:  # Linux down
+            self._canvas.yview_scroll(3, "units")
+        else:
+            delta = int(getattr(event, "delta", 0) or 0)
+            if delta == 0:
+                return None
+            # Windows: multiples of 120; macOS: small ints
+            steps = -1 * (delta // 120 if abs(delta) >= 120 else (1 if delta > 0 else -1))
+            self._canvas.yview_scroll(steps, "units")
+        return "break"
+
+    def _bind_mousewheel(self, _e=None) -> None:
+        self._canvas.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
+        self._canvas.bind_all("<Button-4>", self._on_mousewheel, add="+")
+        self._canvas.bind_all("<Button-5>", self._on_mousewheel, add="+")
+
+    def _unbind_mousewheel(self, _e=None) -> None:
+        try:
+            self._canvas.unbind_all("<MouseWheel>")
+            self._canvas.unbind_all("<Button-4>")
+            self._canvas.unbind_all("<Button-5>")
+        except tk.TclError:
+            pass
+
+    def refresh(self) -> None:
+        """Call after adding/removing children so the scrollbar updates."""
+        self.interior.update_idletasks()
+        self._on_interior_configure()
+
+
 # ---------------------------------------------------------------------------
 # Glass panels (3D edge + frost fill)
 # ---------------------------------------------------------------------------
 
 
 class GlassPanel(tk.Frame):
-    """Elevated frosted panel with shadow + bevel (glassmorphism simulation)."""
+    """Elevated frosted panel with shadow + bevel (glassmorphism simulation).
+
+    Content is packed (so the panel has a real natural height). Decorative
+    layers are placed under it — otherwise fill=x / expand=False cards
+    collapse to zero height and disappear.
+    """
 
     def __init__(self, master: tk.Misc, padding: int = 16, elevate: int = 1, **kw):
-        # inherit ambient from parent
         bg = G["bg_deep"]
         super().__init__(master, bg=bg, **kw)
         lift = max(0, min(3, elevate))
-        # deep shadow (3D floor)
+        self._lift = lift
+
+        # Decorative layers (placed; do not drive size)
         self._shadow = tk.Frame(self, bg=G["shadow"], bd=0, highlightthickness=0)
-        self._shadow.place(x=4 + lift, y=5 + lift, relwidth=1, relheight=1)
-
-        # outer dark rim
         self._rim = tk.Frame(self, bg=G["edge_dark"], bd=0, highlightthickness=0)
-        self._rim.place(x=0, y=0, relwidth=1, relheight=1)
+        self._edge = tk.Frame(self, bg=G["edge_light"], bd=0, highlightthickness=0)
+        self._floor = tk.Frame(self, bg=G["edge_dark"], bd=0, highlightthickness=0)
+        self._body = tk.Frame(self, bg=G["glass"], bd=0, highlightthickness=0)
+        self._sheen = tk.Frame(self, bg=G["glass_hi"], height=3, bd=0)
+        self._sheen2 = tk.Frame(self, bg=G["edge_dark"], height=1, bd=0)
 
-        # light edge (top-left glass catchlight)
-        self._edge = tk.Frame(self._rim, bg=G["edge_light"], bd=0, highlightthickness=0)
-        self._edge.place(x=1, y=1, relwidth=1, relheight=1, width=-2, height=-2)
+        # Real content — this is what sets the panel height/width
+        inset = 5 + lift
+        self.content = ttk.Frame(self, style="Glass.TFrame", padding=padding)
+        self.content.pack(fill="both", expand=True, padx=inset, pady=inset)
 
-        # dark inner floor
-        self._floor = tk.Frame(self._edge, bg=G["edge_dark"], bd=0, highlightthickness=0)
-        self._floor.place(x=1, y=1, relwidth=1, relheight=1, width=-2, height=-2)
+        self.bind("<Configure>", self._place_decor)
+        self.after_idle(self._place_decor)
 
-        # frost body
-        self._body = tk.Frame(self._floor, bg=G["glass"], bd=0, highlightthickness=0)
-        self._body.place(x=1, y=1, relwidth=1, relheight=1, width=-2, height=-2)
-
-        # top highlight strip (glass sheen)
-        self._sheen = tk.Frame(self._body, bg=G["glass_hi"], height=3, bd=0)
-        self._sheen.pack(fill="x", side="top")
-
-        # soft bottom gloss line
-        self._sheen2 = tk.Frame(self._body, bg=G["edge_dark"], height=1, bd=0)
-        self._sheen2.pack(fill="x", side="bottom")
-
-        # content area
-        self.content = ttk.Frame(self._body, style="Glass.TFrame", padding=padding)
-        self.content.pack(fill="both", expand=True)
+    def _place_decor(self, _e=None) -> None:
+        w = self.winfo_width()
+        h = self.winfo_height()
+        if w <= 2 or h <= 2:
+            return
+        lift = self._lift
+        self._shadow.place(x=4 + lift, y=5 + lift, width=max(1, w - 4 - lift), height=max(1, h - 5 - lift))
+        self._rim.place(x=0, y=0, width=w, height=h)
+        self._edge.place(x=1, y=1, width=max(1, w - 2), height=max(1, h - 2))
+        self._floor.place(x=2, y=2, width=max(1, w - 4), height=max(1, h - 4))
+        self._body.place(x=3, y=3, width=max(1, w - 6), height=max(1, h - 6))
+        self._sheen.place(x=3, y=3, width=max(1, w - 6), height=3)
+        self._sheen2.place(x=3, y=max(3, h - 4), width=max(1, w - 6), height=1)
+        try:
+            self.content.lift()
+        except tk.TclError:
+            pass
 
     def pack(self, **kw):
         # leave room for shadow
@@ -194,7 +290,7 @@ class GlassButton(tk.Frame):
         # stacked 3D layers via pack so Frame reports correct size
         self._drop = tk.Frame(self, bg=G["shadow"], bd=0)
         self._outer = tk.Frame(self, bg=edge_d, bd=0)
-        self._outer.pack(padx=(0, 2), pady=(0, 3))
+        self._outer.pack(padx=(0, 2), pady=(0, 2))
         self._mid = tk.Frame(self._outer, bg=edge_l, bd=0)
         self._mid.pack(padx=1, pady=1)
         self._btn = tk.Label(
@@ -202,9 +298,9 @@ class GlassButton(tk.Frame):
             text=text,
             bg=face,
             fg=fg,
-            font=f["lg"] if primary else f["md"],
-            padx=18 if primary else 12,
-            pady=10 if primary else 7,
+            font=f["md"] if primary else f["sm"],
+            padx=14 if primary else 10,
+            pady=7 if primary else 5,
             cursor="hand2",
         )
         if width_chars:
@@ -320,8 +416,8 @@ class SegmentBar(tk.Frame):
                 bg=G["glass2"],
                 fg=G["muted"],
                 font=f["md"],
-                padx=14,
-                pady=9,
+                padx=12,
+                pady=6,
                 cursor="hand2",
             )
             lab.pack(side="left", padx=2, pady=2)
@@ -354,16 +450,16 @@ def section_title(parent: tk.Misc, title: str, subtitle: str | None = None, step
             text=f" {step} ",
             bg=G["accent_deep"],
             fg=G["accent2"],
-            font=f["md"],
-            padx=6,
-            pady=2,
+            font=f["sm"],
+            padx=4,
+            pady=0,
         )
-        badge.pack(side="left", padx=(0, 10))
+        badge.pack(side="left", padx=(0, 8))
     col = ttk.Frame(row, style="Glass.TFrame")
     col.pack(side="left", fill="x", expand=True)
     ttk.Label(col, text=title, style="GlassTitle.TLabel").pack(anchor="w")
     if subtitle:
-        ttk.Label(col, text=subtitle, style="GlassMuted.TLabel").pack(anchor="w", pady=(2, 0))
+        ttk.Label(col, text=subtitle, style="GlassMuted.TLabel").pack(anchor="w", pady=(0, 0))
 
 
 def dark_option_menu(parent, variable: tk.StringVar, *values, width: int = 8) -> tk.OptionMenu:
@@ -405,23 +501,29 @@ def apply_styles(style: ttk.Style) -> None:
     style.configure("Glass.TFrame", background=G["glass"])
     style.configure("TLabel", background=G["bg"], foreground=G["text"], font=f["ui"])
     style.configure("Glass.TLabel", background=G["glass"], foreground=G["text"], font=f["ui"])
-    style.configure("GlassTitle.TLabel", background=G["glass"], foreground=G["text"], font=f["xl"])
+    style.configure("GlassTitle.TLabel", background=G["glass"], foreground=G["text"], font=f["lg"])
     style.configure("GlassMuted.TLabel", background=G["glass"], foreground=G["muted"], font=f["sm"])
     style.configure("GlassSection.TLabel", background=G["glass"], foreground=G["accent2"], font=f["md"])
     style.configure("Brand.TLabel", background=G["bg"], foreground=G["accent2"], font=f["brand"])
+    style.configure(
+        "BrandCompact.TLabel",
+        background=G["glass"],
+        foreground=G["accent2"],
+        font=("Segoe UI Semibold", 18),
+    )
     style.configure("Sub.TLabel", background=G["bg"], foreground=G["muted"], font=f["ui"])
-    style.configure("GlassPct.TLabel", background=G["glass"], foreground=G["accent2"], font=f["lg"])
+    style.configure("GlassPct.TLabel", background=G["glass"], foreground=G["accent2"], font=f["md"])
     style.configure(
         "TNotebook",
         background=G["bg"],
         borderwidth=0,
-        tabmargins=(4, 6, 4, 0),
+        tabmargins=(2, 2, 2, 0),
     )
     style.configure(
         "TNotebook.Tab",
         background=G["glass2"],
         foreground=G["muted"],
-        padding=(26, 12),
+        padding=(14, 6),
         font=f["md"],
         borderwidth=0,
         lightcolor=G["edge_light"],
@@ -440,7 +542,7 @@ def apply_styles(style: ttk.Style) -> None:
         lightcolor=G["accent2"],
         darkcolor=G["accent_glow"],
         bordercolor=G["edge_dark"],
-        thickness=10,
+        thickness=6,
     )
     style.configure(
         "Glass.TCheckbutton",
@@ -526,7 +628,7 @@ def apply_styles(style: ttk.Style) -> None:
         lightcolor=G["accent2"],
         darkcolor=G["accent_glow"],
         bordercolor=G["edge_dark"],
-        thickness=10,
+        thickness=6,
     )
     style.configure(
         "Dark.TCheckbutton",

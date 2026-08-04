@@ -1,17 +1,25 @@
-YTMP 1.3 — Windows media toolkit
+YTMP — Windows media downloader
 ================================
 
-Install: run YTMP-Setup.exe (includes ffmpeg).
+Includes Music (MP3) and Video (MP4) download.
 
-After open you should see four tabs at the top of the window:
-  1. Download  — paste links (YouTube + many sites), MP3/M4A/WAV/FLAC/Opus/MP4
-  2. Convert   — local file or whole folder to other formats
-  3. Tools     — trim, compress, GIF, normalize, speed, volume, fade, mono,
-                 mute, rotate, reverse, remux, split, merge, snapshot, info
-  4. Library   — search history, open files
+INSTALL
+  1. Run YTMP-Setup.exe (or open YTMP.exe from the release folder)
+  2. Activate with your YM- license key
 
-If you only see Download MP3 / Cancel / Clear with NO Convert / Tools / Library tabs,
-you are running an old install. Uninstall, then reinstall this package.
+DOWNLOAD
+  1. Paste link(s)
+  2. Choose mode:
+     - Music (MP3)  → audio (bitrate + format options)
+     - Video (MP4)  → video (quality 360–best + audio bitrate)
+  3. Click Download MP3 or Download Video
 
-License: activate with your YM- key from the website.
+ALSO
+  - Convert tab: convert local files to other formats
+  - Library tab: history of downloads
+  - ffmpeg ships with the installer
+
 Default save folder: Downloads\YTMP
+Log: %LOCALAPPDATA%\YTMP\launcher.log
+
+Only download content you have the right to use.
