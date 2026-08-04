@@ -1,18 +1,24 @@
-/** API base — set NEXT_PUBLIC_API_URL in env (e.g. .env.local). No hardcoded host. */
-export const API = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+/** API base — set NEXT_PUBLIC_API_URL in env. Trailing slashes are stripped. */
+export const API = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
+
+/** Join base + path without producing `//v1/...` (breaks Vercel CORS preflight via 308). */
+export function apiUrl(path: string): string {
+  if (!API) {
+    throw new Error("NEXT_PUBLIC_API_URL is not set");
+  }
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${API}${p}`;
+}
 
 export async function api<T = unknown>(
   path: string,
   opts: RequestInit & { auth?: boolean } = {}
 ): Promise<T> {
-  if (!API) {
-    throw new Error("NEXT_PUBLIC_API_URL is not set");
-  }
   const headers = new Headers(opts.headers || {});
   if (!(opts.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...opts,
     headers,
     credentials: "include", // httpOnly admin cookie

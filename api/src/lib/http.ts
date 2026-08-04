@@ -12,12 +12,12 @@ export const ADMIN_COOKIE = "ytmp_admin";
 export function allowedOrigins(): string[] {
   return (process.env.CORS_ORIGINS || DEFAULT_ORIGINS.join(","))
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.trim().replace(/\/+$/, ""))
     .filter(Boolean);
 }
 
 export function pickOrigin(req: Request): string {
-  const origin = req.headers.get("origin") || "";
+  const origin = (req.headers.get("origin") || "").trim().replace(/\/+$/, "");
   const allowed = allowedOrigins();
   if (origin && allowed.includes(origin)) return origin;
   // Never echo arbitrary Origin when using credentials

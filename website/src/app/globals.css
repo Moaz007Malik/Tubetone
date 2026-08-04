@@ -126,13 +126,12 @@ svg {
 }
 
 .tilt-3d {
-  transform-style: preserve-3d;
-  transition: transform 0.18s ease-out, box-shadow 0.25s ease;
-  will-change: transform;
+  /* Mouse-follow transforms removed — layout only */
+  transform: none !important;
+  will-change: auto;
 }
 
 .tilt-3d__face {
-  transform-style: preserve-3d;
   height: 100%;
   width: 100%;
   min-width: 0;
