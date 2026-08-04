@@ -401,13 +401,17 @@ def run_gui() -> None:
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             meipass = Path(sys._MEIPASS)
             icon_candidates.extend(
-                [meipass / "tubetone.ico", meipass / "icon.png", APP_DIR / "tubetone.ico"]
+                [meipass / "tubetone.ico", meipass / "music-logo.png", meipass / "icon.png", APP_DIR / "tubetone.ico"]
             )
         icon_candidates.extend(
             [
                 Path(__file__).resolve().parent / "tubetone.ico",
                 APP_DIR / "tubetone.ico",
+                Path(__file__).resolve().parent / "music-logo.png",
+                Path(__file__).resolve().parent / "icon.png",
+                Path(__file__).resolve().parent.parent / "music-logo.png",
                 Path(__file__).resolve().parent.parent / "icon.png",
+                APP_DIR / "music-logo.png",
                 APP_DIR / "icon.png",
             ]
         )
@@ -455,9 +459,62 @@ def run_gui() -> None:
 
     brand = ttk.Frame(header, style="Glass.TFrame")
     brand.pack(side="left")
-    ttk.Label(brand, text="YTMP", style="BrandCompact.TLabel").pack(anchor="w")
+    brand_row = ttk.Frame(brand, style="Glass.TFrame")
+    brand_row.pack(anchor="w")
+    # Official music note logo (window icon + header mark)
+    brand_img_holder = {"img": None}
+    try:
+        logo_candidates = []
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            meipass = Path(sys._MEIPASS)
+            logo_candidates.extend(
+                [
+                    meipass / "music-logo-40.png",
+                    meipass / "music-logo.png",
+                    meipass / "icon.png",
+                    APP_DIR / "music-logo-40.png",
+                    APP_DIR / "music-logo.png",
+                    APP_DIR / "icon.png",
+                ]
+            )
+        logo_candidates.extend(
+            [
+                Path(__file__).resolve().parent / "music-logo-40.png",
+                Path(__file__).resolve().parent / "music-logo.png",
+                Path(__file__).resolve().parent / "icon.png",
+                Path(__file__).resolve().parent.parent / "music-logo.png",
+                Path(__file__).resolve().parent.parent / "icon.png",
+                APP_DIR / "music-logo-40.png",
+                APP_DIR / "music-logo.png",
+                APP_DIR / "icon.png",
+            ]
+        )
+        for lp in logo_candidates:
+            if not lp.is_file():
+                continue
+            # Subsample for crisp header mark (~36–40 px)
+            raw = tk.PhotoImage(file=str(lp))
+            brand_img = raw
+            # only subsample oversized assets (not pre-sized -40)
+            if "40" not in lp.stem:
+                fw, fh = raw.width(), raw.height()
+                target = 40
+                if fw > target * 2:
+                    factor = max(1, fw // target)
+                    brand_img = raw.subsample(factor, factor)
+            brand_img_holder["img"] = brand_img
+            root._brand_logo = brand_img
+            tk.Label(brand_row, image=brand_img, bg=G["bg"], bd=0, highlightthickness=0).pack(
+                side="left", padx=(0, 10)
+            )
+            break
+    except Exception:
+        pass
+    brand_text = ttk.Frame(brand_row, style="Glass.TFrame")
+    brand_text.pack(side="left")
+    ttk.Label(brand_text, text="YTMP", style="BrandCompact.TLabel").pack(anchor="w")
     ttk.Label(
-        brand,
+        brand_text,
         text="Download · Convert · Edit — glass UI on your PC",
         style="GlassMuted.TLabel",
     ).pack(anchor="w", pady=(1, 0))

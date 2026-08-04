@@ -1,34 +1,29 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Outfit } from "next/font/google";
-import localFont from "next/font/local";
+import { Geist, Inter, IBM_Plex_Mono } from "next/font/google";
 import { GradientBg } from "@/components/GradientBg";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
 /**
- * Display / logo face — Cal Sans (SIL Open Font License, free)
- * Geometric modern display font in the same logo/showreel class as commercial
- * Nexxa (Envato). Self-hosted from @fontsource/cal-sans — no purchase needed.
- * Body: Outfit (Google Fonts, free). Mono: IBM Plex Mono.
+ * Helixa-style SaaS type (Dribbble Helixa AI chatbot landings / helexa.webflow):
+ * Geist for display + Inter for UI — free Google Fonts, commercial-safe.
  */
-const logo = localFont({
-  src: "../fonts/CalSans-Regular.woff2",
-  variable: "--font-logo",
-  weight: "400",
-  display: "swap",
-  fallback: ["system-ui", "sans-serif"],
-});
-
-const display = localFont({
-  src: "../fonts/CalSans-Regular.woff2",
+const display = Geist({
+  subsets: ["latin"],
   variable: "--font-display",
-  weight: "400",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
-  fallback: ["system-ui", "sans-serif"],
 });
 
-const sans = Outfit({
+const logo = Geist({
+  subsets: ["latin"],
+  variable: "--font-logo",
+  weight: ["600", "700"],
+  display: "swap",
+});
+
+const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   weight: ["400", "500", "600", "700"],
@@ -49,6 +44,13 @@ export const metadata: Metadata = {
   },
   description:
     "Download from the web, convert and edit media locally. Windows app with license activation — files stay on your PC.",
+  icons: {
+    icon: [
+      { url: "/music-logo.png", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

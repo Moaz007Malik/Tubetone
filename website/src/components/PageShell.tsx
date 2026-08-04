@@ -32,7 +32,7 @@ export function PageHero({
       {lead ? (
         <p className="mt-3 text-base leading-relaxed text-[var(--muted)] md:text-lg">{lead}</p>
       ) : null}
-      <div className="mt-6 h-1.5 w-14 rounded-full bg-gradient-to-r from-[var(--violet)] via-[var(--magenta)] to-[var(--sky)]" />
+      <div className="mt-6 h-1.5 w-14 rounded-full bg-gradient-to-r from-[var(--indigo)] via-[var(--violet)] to-[var(--sky)]" />
     </header>
   );
 }

@@ -43,9 +43,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen md:grid md:grid-cols-[220px_1fr]">
       <aside className="border-b border-[#2a4558] bg-[#12202b] p-4 md:border-b-0 md:border-r">
-        <div className="mb-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#7a96a8]">YTMP</p>
-          <h1 className="text-lg font-semibold text-[#2dd4bf]">Admin</h1>
+        <div className="mb-6 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/music-logo.png" alt="YTMP" width={40} height={40} className="rounded-xl" />
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#7a96a8]">YTMP</p>
+            <h1 className="text-lg font-semibold text-[#2dd4bf]">Admin</h1>
+          </div>
         </div>
         <nav className="flex flex-wrap gap-2 md:flex-col">
           {nav.map((item) => {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const NAV = [
   { href: "/features", label: "Features" },
@@ -20,15 +21,12 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 px-4 pt-4 md:px-6">
-      <div className="glass-bar mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-[var(--radius)] px-4 py-3 md:px-6">
-        <Link href="/" className="flex items-center gap-2 no-underline">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-[var(--violet)] via-[var(--magenta)] to-[var(--sky)] text-sm font-bold text-white shadow-md">
-            Y
-          </span>
-          <span className="logo-type text-xl tracking-[-0.04em]">YTMP</span>
+      <div className="glass-bar mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-[var(--radius-pill)] px-4 py-2.5 md:px-5">
+        <Link href="/" className="flex items-center gap-2.5 no-underline">
+          <BrandLogo size={38} priority showWordmark />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-0.5 lg:flex">
           {NAV.map((item) => {
             const active = path === item.href || path.startsWith(item.href + "/");
             return (
