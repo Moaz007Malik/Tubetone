@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Scene3D } from "@/components/Scene3D";
 import { Tilt3D } from "@/components/Tilt3D";
+import { DOWNLOAD_LABEL, DOWNLOAD_URL, hasDownloadUrl } from "@/lib/download";
 
 export default function HomePage() {
+  const canDownload = hasDownloadUrl();
+
   return (
     <main className="stage-3d px-3 sm:px-4 md:px-6">
       <section className="hero layer-3d mx-auto mt-4 max-w-6xl sm:mt-5 md:mt-8">
@@ -21,11 +24,22 @@ export default function HomePage() {
               everything private on your PC — no cloud upload.
             </p>
             <div className="btn-row rise rise-delay-3 mt-6 sm:mt-8">
-              <Link href="/pricing" className="btn-primary">
+              {canDownload ? (
+                <a
+                  href={DOWNLOAD_URL}
+                  className="btn-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {DOWNLOAD_LABEL}
+                </a>
+              ) : (
+                <Link href="/download" className="btn-primary">
+                  {DOWNLOAD_LABEL}
+                </Link>
+              )}
+              <Link href="/pricing" className="btn-ghost">
                 Get a license
-              </Link>
-              <Link href="/download" className="btn-ghost">
-                Download for Windows
               </Link>
             </div>
             <ul className="hero-pills rise rise-delay-4 mt-2">
@@ -146,22 +160,35 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto my-14 max-w-6xl sm:my-20 md:my-28">
-        <Tilt3D className="cta-band card-3d" max={4} lift={16}>
-          <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-indigo-400/20 blur-3xl" />
-          <div className="absolute -bottom-16 left-10 h-52 w-52 rounded-full bg-fuchsia-400/15 blur-3xl" />
-          <div className="relative flex flex-col items-stretch justify-between gap-6 sm:gap-8 md:flex-row md:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-                Get started
+        <Tilt3D className="cta-band card-3d" max={3} lift={10}>
+          <div className="pointer-events-none absolute -right-16 top-1/2 h-56 w-56 -translate-y-1/2 rounded-full bg-indigo-400/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-fuchsia-400/18 blur-3xl" />
+          <div className="cta-band__inner">
+            <div className="cta-band__copy">
+              <p className="cta-band__kicker">Get started</p>
+              <h2 className="cta-band__title">Install once. Create offline, anytime.</h2>
+              <p className="cta-band__sub">
+                Get a license, run the Windows installer, and export media locally — no cloud
+                upload.
               </p>
-              <p className="cta-band__title">Install once. Create offline, anytime.</p>
             </div>
-            <div className="btn-row md:shrink-0">
-              <Link href="/pricing" className="cta-btn-light">
-                View pricing
-              </Link>
-              <Link href="/docs" className="cta-btn-ghost">
-                Read docs
+            <div className="cta-band__actions">
+              {canDownload ? (
+                <a
+                  href={DOWNLOAD_URL}
+                  className="cta-btn-light"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {DOWNLOAD_LABEL}
+                </a>
+              ) : (
+                <Link href="/download" className="cta-btn-light">
+                  {DOWNLOAD_LABEL}
+                </Link>
+              )}
+              <Link href="/pricing" className="cta-btn-ghost">
+                Get a license
               </Link>
             </div>
           </div>

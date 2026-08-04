@@ -1,9 +1,13 @@
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8787";
+/** API base — set NEXT_PUBLIC_API_URL in env (e.g. .env.local). No hardcoded host. */
+export const API = (process.env.NEXT_PUBLIC_API_URL || "").trim();
 
 export async function api<T = unknown>(
   path: string,
   opts: RequestInit & { auth?: boolean } = {}
 ): Promise<T> {
+  if (!API) {
+    throw new Error("NEXT_PUBLIC_API_URL is not set");
+  }
   const headers = new Headers(opts.headers || {});
   if (!(opts.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -36,5 +40,3 @@ export async function logout(): Promise<void> {
     /* ignore */
   }
 }
-
-export { API };

@@ -3,7 +3,8 @@ import { PageHero, PageShell } from "@/components/PageShell";
 export const metadata = { title: "Support" };
 
 export default function SupportPage() {
-  const email = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@ytmp.app";
+  const email = (process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "").trim();
+
   return (
     <PageShell narrow>
       <PageHero
@@ -11,9 +12,17 @@ export default function SupportPage() {
         title="Support"
         lead="Activation, payments, or downloads — include your order ID or license email."
       />
-      <a href={`mailto:${email}`} className="btn-primary">
-        {email}
-      </a>
+      {email ? (
+        <a href={`mailto:${email}`} className="btn-primary">
+          {email}
+        </a>
+      ) : (
+        <div className="prose-panel">
+          Set{" "}
+          <code className="font-mono text-[var(--violet)]">NEXT_PUBLIC_SUPPORT_EMAIL</code> in
+          env to show a contact address.
+        </div>
+      )}
       <ul className="step-list mt-10">
         <li className="step-row">
           <span className="step-badge">01</span>

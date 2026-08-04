@@ -27,7 +27,7 @@ async function main() {
           yearly: { label: "Yearly", priceDisplay: "$49/yr", days: 365 },
         },
         downloadUrl: process.env.DOWNLOAD_URL || "",
-        supportEmail: process.env.SUPPORT_EMAIL || "support@ytmp.app",
+        supportEmail: process.env.SUPPORT_EMAIL || "",
       }),
     },
   });

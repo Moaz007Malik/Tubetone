@@ -134,6 +134,8 @@ svg {
 .tilt-3d__face {
   transform-style: preserve-3d;
   height: 100%;
+  width: 100%;
+  min-width: 0;
 }
 
 /* Extruded glass cards — thick bottom face + floor shadow */
@@ -1003,31 +1005,119 @@ body.nav-open {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(ellipse 80% 120% at 100% 0%, rgba(99, 102, 241, 0.45), transparent 55%),
-    radial-gradient(ellipse 70% 100% at 0% 100%, rgba(217, 70, 239, 0.28), transparent 50%),
-    linear-gradient(135deg, #1a1233 0%, #12122a 50%, #0c1220 100%);
-  padding: 3rem 1.5rem;
+    radial-gradient(ellipse 55% 90% at 92% 50%, rgba(99, 102, 241, 0.4), transparent 58%),
+    radial-gradient(ellipse 50% 80% at 8% 90%, rgba(217, 70, 239, 0.28), transparent 52%),
+    linear-gradient(125deg, #17122e 0%, #121228 48%, #0d1220 100%);
+  padding: 2rem 1.35rem;
   color: #fff;
   box-shadow: var(--shadow);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .cta-band {
+    padding: 2.5rem 2rem;
+  }
 }
 
 @media (min-width: 768px) {
   .cta-band {
-    padding: 3.75rem 3rem;
+    padding: 2.75rem 2.75rem;
   }
+}
+
+@media (min-width: 1024px) {
+  .cta-band {
+    padding: 3rem 3.25rem;
+  }
+}
+
+.cta-band__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  gap: 1.65rem;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .cta-band__inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2rem 2.5rem;
+  }
+}
+
+.cta-band__copy {
+  min-width: 0;
+  max-width: 36rem;
+}
+
+.cta-band__kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .cta-band__title {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
   color: #fff;
-  font-size: clamp(1.85rem, 4vw, 2.5rem);
-  max-width: 30rem;
-  margin: 0.5rem 0 0;
-  line-height: 1.15;
+  font-size: clamp(1.55rem, 3.4vw, 2.45rem);
+  max-width: none;
+  margin: 0.55rem 0 0;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.cta-band__sub {
+  margin: 0.7rem 0 0;
+  max-width: 28rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.cta-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.65rem 0.85rem;
+  margin: 0;
+  width: 100%;
+}
+
+.cta-band__actions > .cta-btn-light,
+.cta-band__actions > .cta-btn-ghost {
+  margin-bottom: 0.65rem;
+  flex: 0 1 auto;
+}
+
+@media (min-width: 768px) {
+  .cta-band__actions {
+    width: auto;
+    justify-content: flex-end;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .cta-band__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cta-band__actions > .cta-btn-light,
+  .cta-band__actions > .cta-btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* CTA buttons use the shared 3D button system above (color variants only). */
