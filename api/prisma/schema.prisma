@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+  orders        Order[]
+}
+
+model Subscription {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan       String
+  status     String
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime
+  maxDevices Int       @default(2)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  licenses   License[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model License {
+  id             String       @id @default(cuid())
+  key            String       @unique
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  status         String       @default("active")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  devices        Device[]
+  orders         Order[]
+
+  @@index([subscriptionId])
+}
+
+model Device {
+  id          String   @id @default(cuid())
+  licenseId   String
+  license     License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  fingerprint String
+  machineName String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([licenseId, fingerprint])
+  @@index([licenseId])
+}
+
+model Coupon {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  type      String
+  value     Float
+  maxUses   Int       @default(0)
+  usedCount Int       @default(0)
+  expiresAt DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  email      String
+  name       String?
+  plan       String
+  couponCode String?
+  note       String?
+  status     String   @default("pending")
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  licenseId  String?
+  license    License? @relation(fields: [licenseId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String?
+  action    String
+  meta      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model AppConfig {
+  id    String @id @default("default")
+  value String
+}

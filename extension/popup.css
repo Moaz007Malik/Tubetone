@@ -4,9 +4,9 @@
   --bg-soft: #222633;
   --border: #2e3445;
   --text: #f0ece4;
-  --muted: #9aa3b5;
-  --accent: #e8a23a;
-  --accent-deep: #c47f18;
+  --muted: #7a96a8;
+  --accent: #2dd4bf;
+  --accent-deep: #14b8a6;
   --accent-soft: rgba(232, 162, 58, 0.16);
   --ok: #3dcf8e;
   --danger: #e86a6a;
@@ -343,7 +343,7 @@ input[type="text"]:focus {
 
 .btn.primary {
   background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-  color: #1a1208;
+  color: #042f2e;
 }
 
 .btn.primary:hover:not(:disabled) {

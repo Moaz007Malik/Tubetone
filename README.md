@@ -1,24 +1,75 @@
-# TubeTone — YouTube → MP3
+# YTMP — YouTube → MP3 & Video (subscription)
 
-Standalone Windows app (recommended) or optional Chrome extension.
+Standalone Windows app + license API + public website + separate admin.
 
-Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) + **ffmpeg** on your PC.
+Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) + **ffmpeg** on the PC. Downloads require an active online license.
 
-## Share with a friend (Windows .exe) — recommended
+## Local SaaS stack (API + website + admin)
 
-Paste YouTube links and download MP3s. **No Chrome extension.**
+```bat
+cd api
+npm install
+npm run db:setup
+npm run dev
+```
+
+API: http://127.0.0.1:8787  
+Default admin: `admin@ytmp.app` / `admin123!` (change in `api/.env`)
+
+SMTP (optional — auto-email license keys): set `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` in `api/.env`.
+
+Security: admin session uses httpOnly cookies; set a strong `JWT_SECRET` before production. Audit log is under Admin → Audit log.
+
+```bat
+cd website
+npm install
+npm run dev
+```
+
+Website: http://127.0.0.1:3000
+
+```bat
+cd admin
+npm install
+npm run dev
+```
+
+Admin: http://127.0.0.1:3001
+
+**Manual payments:** user submits an order on `/pricing` → admin **Mark paid** on Orders → copy license key → user activates in the app.
+
+Desktop API URL: `%LOCALAPPDATA%\YTMP\config.json` (see `launcher/config.example.json`).
+
+---
+
+## Share with a friend (Windows .exe)
+
+Paste YouTube links (Music or Video). **No Chrome extension. No Python.** Requires license activation.
+
+### Installer
+
+```bat
+cd launcher
+build.bat
+build_installer.bat
+```
+
+Creates `release/YTMP-Setup.exe`.
+
+The installer:
+- Puts the app in `Program Files\YTMP`
+- Installs ffmpeg to `C:\ffmpeg\bin`
+- Sets `FFMPEG_LOCATION` and PATH
+- Creates a desktop shortcut
+
+### Portable folder
 
 ```bat
 cd launcher
 build.bat
 ```
 
-Creates `release/TubeTone/`:
-
-- `TubeTone.exe` — paste links, pick bitrate/folder, download  
-- `README.txt` — short instructions  
-
-Zip that folder and send it. First run may download ffmpeg once.
+Creates `release/YTMP/`.
 
 ---
 

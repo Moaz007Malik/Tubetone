@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0a1219;
+  --panel: #12202b;
+  --border: #2a4558;
+  --text: #e8f1f5;
+  --muted: #7a96a8;
+  --accent: #2dd4bf;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 70% 40% at 0% 0%, rgba(45, 212, 191, 0.08), transparent 50%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Don't force teal on every link — nav needs its own contrast */
+a {
+  color: inherit;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}

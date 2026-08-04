@@ -1,5 +1,5 @@
 """
-TubeTone companion server — downloads YouTube audio as MP3 via yt-dlp.
+YTMP companion server — downloads YouTube audio as MP3 via yt-dlp.
 Works locally and on Render (Docker).
 """
 
@@ -26,12 +26,13 @@ HOST = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.
 PORT = int(os.environ.get("PORT", "8765"))
 API_KEY = os.environ.get("API_KEY", "").strip()
 ALLOWED_BITRATES = {64, 128, 192, 256, 320}
+ALLOWED_QUALITIES = {"360", "480", "720", "1080", "1440", "2160", "best"}
 
-# Local: ~/Downloads/TubeTone · Cloud: /tmp/tubetone
+# Local: ~/Downloads/YTMP · Cloud: /tmp/tubetone
 if os.environ.get("RENDER") or os.environ.get("DOWNLOAD_DIR"):
     DOWNLOAD_DIR = Path(os.environ.get("DOWNLOAD_DIR", "/tmp/tubetone"))
 else:
-    DOWNLOAD_DIR = Path.home() / "Downloads" / "TubeTone"
+    DOWNLOAD_DIR = Path.home() / "Downloads" / "YTMP"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 _download_lock = threading.Lock()
@@ -222,17 +223,72 @@ def fetch_info(url: str, cookiefile: str | None = None) -> dict:
         {
             "skip_download": True,
             "ignore_no_formats_error": True,
-            "format": "bestaudio/best/best*",
+            "quiet": True,
+            "no_warnings": True,
         }
     )
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False) or {}
+
+    duration = info.get("duration")
+    mins = int(duration // 60) if isinstance(duration, (int, float)) else None
+    secs = int(duration % 60) if isinstance(duration, (int, float)) else None
+    duration_label = f"{mins}:{secs:02d}" if mins is not None else None
+
     return {
-        "title": info.get("title") or "YouTube audio",
+        "title": info.get("title") or "YouTube media",
         "thumbnail": info.get("thumbnail"),
-        "duration": info.get("duration"),
+        "duration": duration,
+        "duration_label": duration_label,
         "id": info.get("id"),
+        "uploader": info.get("uploader") or info.get("channel"),
+        "view_count": info.get("view_count"),
+        "webpage_url": info.get("webpage_url") or url,
+        "is_playlist": info.get("_type") == "playlist" or bool(info.get("entries")),
+        "playlist_count": len(list(info.get("entries") or []))
+        if (info.get("_type") == "playlist" or info.get("entries"))
+        else None,
     }
+
+
+def expand_playlist(
+    url: str,
+    limit: int = 0,
+    cookiefile: str | None = None,
+) -> list[str]:
+    """Return video URLs. Single videos return [url]. Playlists return entry URLs."""
+    opts = ydl_base_opts(cookiefile)
+    opts.update(
+        {
+            "skip_download": True,
+            "extract_flat": "in_playlist",
+            "quiet": True,
+            "no_warnings": True,
+        }
+    )
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False) or {}
+
+    if info.get("_type") == "playlist" or info.get("entries"):
+        urls: list[str] = []
+        for entry in info.get("entries") or []:
+            if not entry:
+                continue
+            vid = entry.get("id") or entry.get("url")
+            if not vid:
+                continue
+            if isinstance(vid, str) and vid.startswith("http"):
+                urls.append(vid)
+            else:
+                urls.append(f"https://www.youtube.com/watch?v={vid}")
+            if limit and len(urls) >= limit:
+                break
+        return urls or [url]
+    return [url]
+
+
+class DownloadCancelled(Exception):
+    """Raised when the user cancels an in-progress download."""
 
 
 def _run_download(
@@ -242,22 +298,38 @@ def _run_download(
     cookiefile: str | None,
     clients: list[str],
     progress_hooks: list | None = None,
+    filename_template: str | None = None,
+    preferredcodec: str = "mp3",
+    write_subs: bool = False,
+    write_thumbnail: bool = False,
 ) -> dict:
-    outtmpl = str(work / "%(title)s [%(id)s].%(ext)s")
+    codec = (preferredcodec or "mp3").lower().strip()
+    if codec not in {"mp3", "m4a", "wav", "flac", "opus", "aac"}:
+        codec = "mp3"
+    ext_map = {"m4a": "m4a", "aac": "m4a", "wav": "wav", "flac": "flac", "opus": "opus", "mp3": "mp3"}
+    ext = ext_map[codec]
+    tmpl = (filename_template or "%(title)s [%(id)s]").strip() or "%(title)s [%(id)s]"
+    outtmpl = str(work / f"{tmpl}.%(ext)s")
     opts = ydl_base_opts(cookiefile, clients)
+    postprocessors: list[dict] = [
+        {
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": codec if codec != "aac" else "m4a",
+            "preferredquality": str(bitrate),
+        }
+    ]
+    if write_thumbnail:
+        postprocessors.append({"key": "FFmpegThumbnailsConvertor", "format": "jpg"})
     opts.update(
         {
-            # Prefer audio-only; keep light progressive fallbacks for stubborn videos
             "format": "bestaudio[ext=m4a]/bestaudio/140/251/250/249/18/bestaudio*/best*",
             "outtmpl": outtmpl,
             "keepvideo": False,
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": str(bitrate),
-                }
-            ],
+            "writesubtitles": write_subs,
+            "writeautomaticsub": write_subs,
+            "subtitleslangs": ["en", "en-US", "en-GB"] if write_subs else [],
+            "writethumbnail": write_thumbnail,
+            "postprocessors": postprocessors,
         }
     )
     if progress_hooks:
@@ -266,16 +338,26 @@ def _run_download(
         info = ydl.extract_info(url, download=True)
         title = info.get("title") or "audio"
         video_id = info.get("id") or "unknown"
-        filename = f"{sanitize_filename(title)} [{video_id}].mp3"
+        filename = f"{sanitize_filename(title)} [{video_id}].{ext}"
 
-        requested = Path(ydl.prepare_filename(info)).with_suffix(".mp3")
-        matches = list(work.glob("*.mp3"))
+        requested = Path(ydl.prepare_filename(info)).with_suffix(f".{ext}")
+        matches = list(work.glob(f"*.{ext}"))
         if requested.exists():
             path = requested
         elif matches:
             path = max(matches, key=lambda p: p.stat().st_mtime)
         else:
-            raise RuntimeError("MP3 was not created (ffmpeg conversion failed)")
+            # fallback any audio
+            any_audio = (
+                list(work.glob("*.mp3"))
+                + list(work.glob("*.m4a"))
+                + list(work.glob("*.wav"))
+                + list(work.glob("*.opus"))
+                + list(work.glob("*.flac"))
+            )
+            if not any_audio:
+                raise RuntimeError("Audio file was not created (ffmpeg conversion failed)")
+            path = max(any_audio, key=lambda p: p.stat().st_mtime)
         filename = path.name
 
     return {
@@ -293,6 +375,10 @@ def download_mp3(
     bitrate: int,
     cookiefile: str | None = None,
     progress_hooks: list | None = None,
+    filename_template: str | None = None,
+    preferredcodec: str = "mp3",
+    write_subs: bool = False,
+    write_thumbnail: bool = False,
 ) -> dict:
     if bitrate not in ALLOWED_BITRATES:
         raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
@@ -317,11 +403,173 @@ def download_mp3(
         for clients, cookies in attempts:
             try:
                 return _run_download(
-                    url, bitrate, work, cookies, clients, progress_hooks
+                    url,
+                    bitrate,
+                    work,
+                    cookies,
+                    clients,
+                    progress_hooks,
+                    filename_template,
+                    preferredcodec,
+                    write_subs,
+                    write_thumbnail,
                 )
+            except DownloadCancelled:
+                raise
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{'+'.join(clients)}: {exc}")
-                # Clear partial downloads between attempts
+                for f in work.glob("*"):
+                    if f.is_file() and f.suffix != ".txt":
+                        f.unlink(missing_ok=True)
+
+    detail = " | ".join(errors[-3:])
+    raise RuntimeError(
+        "Download failed after client fallbacks. "
+        f"Details: {detail}"
+    )
+
+
+def video_format_string(quality: str) -> str:
+    """Prefer MP4 video + M4A audio up to the chosen height, with fallbacks."""
+    if quality == "best":
+        return (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
+            "bestvideo+bestaudio/best"
+        )
+    height = int(quality)
+    return (
+        f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/"
+        f"bestvideo[height<={height}]+bestaudio/"
+        f"best[height<={height}]/best"
+    )
+
+
+def _run_video_download(
+    url: str,
+    quality: str,
+    bitrate: int,
+    work: Path,
+    cookiefile: str | None,
+    clients: list[str],
+    progress_hooks: list | None = None,
+    filename_template: str | None = None,
+) -> dict:
+    tmpl = (filename_template or "%(title)s [%(id)s]").strip() or "%(title)s [%(id)s]"
+    outtmpl = str(work / f"{tmpl}.%(ext)s")
+    opts = ydl_base_opts(cookiefile, clients)
+    opts.update(
+        {
+            "format": video_format_string(quality),
+            "outtmpl": outtmpl,
+            "merge_output_format": "mp4",
+            "postprocessors": [
+                {"key": "FFmpegVideoRemuxer", "preferedformat": "mp4"},
+            ],
+            # Re-encode audio to the chosen bitrate; keep video stream as-is.
+            "postprocessor_args": {
+                "VideoRemuxer": [
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    f"{bitrate}k",
+                ],
+            },
+        }
+    )
+    if progress_hooks:
+        opts["progress_hooks"] = progress_hooks
+
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        title = info.get("title") or "video"
+        video_id = info.get("id") or "unknown"
+
+        prepared = Path(ydl.prepare_filename(info))
+        candidates = [
+            prepared.with_suffix(".mp4"),
+            prepared,
+            *sorted(work.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True),
+            *sorted(
+                work.glob("*.mkv"), key=lambda p: p.stat().st_mtime, reverse=True
+            ),
+            *sorted(
+                work.glob("*.webm"), key=lambda p: p.stat().st_mtime, reverse=True
+            ),
+        ]
+        path = next((p for p in candidates if p.is_file()), None)
+        if path is None:
+            raise RuntimeError("Video file was not created (merge/remux failed)")
+
+        # Normalize extension in display name when remuxed to mp4
+        filename = path.name
+        if path.suffix.lower() != ".mp4":
+            mp4_name = f"{sanitize_filename(title)} [{video_id}].mp4"
+            mp4_path = work / mp4_name
+            if path.resolve() != mp4_path.resolve():
+                path.rename(mp4_path)
+                path = mp4_path
+                filename = mp4_name
+
+    return {
+        "ok": True,
+        "filename": filename,
+        "path": str(path),
+        "workdir": str(work),
+        "bitrate": bitrate,
+        "quality": quality,
+        "title": title,
+        "kind": "video",
+    }
+
+
+def download_video(
+    url: str,
+    quality: str,
+    bitrate: int,
+    cookiefile: str | None = None,
+    progress_hooks: list | None = None,
+    filename_template: str | None = None,
+) -> dict:
+    quality = str(quality).lower().strip()
+    if quality not in ALLOWED_QUALITIES:
+        raise ValueError(f"Quality must be one of {sorted(ALLOWED_QUALITIES)}")
+    if bitrate not in ALLOWED_BITRATES:
+        raise ValueError(f"Bitrate must be one of {sorted(ALLOWED_BITRATES)}")
+    if not FFMPEG_LOCATION:
+        raise RuntimeError(
+            "ffmpeg/ffprobe not found. Install ffmpeg or set FFMPEG_LOCATION."
+        )
+
+    work = Path(tempfile.mkdtemp(prefix="tubetone_vid_", dir=str(DOWNLOAD_DIR)))
+    env_cookies = str(COOKIES_PATH) if COOKIES_PATH else None
+    primary = cookiefile or env_cookies
+
+    attempts: list[tuple[list[str], str | None]] = [
+        (["mweb", "web"], primary),
+        (["web_embedded", "android"], primary),
+        (["web_embedded", "android"], None),
+    ]
+
+    errors: list[str] = []
+    with _download_lock:
+        for clients, cookies in attempts:
+            try:
+                return _run_video_download(
+                    url,
+                    quality,
+                    bitrate,
+                    work,
+                    cookies,
+                    clients,
+                    progress_hooks,
+                    filename_template,
+                )
+            except DownloadCancelled:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{'+'.join(clients)}: {exc}")
                 for f in work.glob("*"):
                     if f.is_file() and f.suffix != ".txt":
                         f.unlink(missing_ok=True)
@@ -386,7 +634,7 @@ class Handler(BaseHTTPRequestHandler):
                 200,
                 {
                     "ok": True,
-                    "service": "TubeTone",
+                    "service": "YTMP",
                     "download_dir": str(DOWNLOAD_DIR),
                     "ffmpeg": FFMPEG_LOCATION,
                     "auth_required": bool(API_KEY),
@@ -495,7 +743,7 @@ def quote_filename(name: str) -> str:
 def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print("=" * 56)
-    print("  TubeTone companion server")
+    print("  YTMP companion server")
     print(f"  Listening on http://{HOST}:{PORT}")
     print(f"  Temp dir: {DOWNLOAD_DIR}")
     if FFMPEG_LOCATION:

@@ -1,0 +1,11 @@
+YTMP will install:
+
+  • App → C:\Program Files\YTMP
+  • ffmpeg → C:\ffmpeg\bin
+  • Environment variable FFMPEG_LOCATION
+  • C:\ffmpeg\bin added to system PATH
+  • Desktop shortcut (optional)
+
+Modes: Music (MP3) and Video (quality + audio bitrate).
+No Python or Chrome extension is required.
+Administrator permission is needed for Program Files and PATH.

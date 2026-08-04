@@ -1,22 +1,17 @@
-TubeTone — YouTube to MP3 (Windows)
-===================================
+YTMP 1.3 — Windows media toolkit
+================================
 
-Just run TubeTone.exe — no Chrome extension needed.
+Install: run YTMP-Setup.exe (includes ffmpeg).
 
-SETUP
-  1. Unzip this folder anywhere
-  2. Double-click TubeTone.exe
-  3. First run may download ffmpeg (~80 MB) once — wait until it says Ready
+After open you should see four tabs at the top of the window:
+  1. Download  — paste links (YouTube + many sites), MP3/M4A/WAV/FLAC/Opus/MP4
+  2. Convert   — local file or whole folder to other formats
+  3. Tools     — trim, compress, GIF, normalize, speed, volume, fade, mono,
+                 mute, rotate, reverse, remux, split, merge, snapshot, info
+  4. Library   — search history, open files
 
-DOWNLOAD
-  1. Paste a YouTube link (or several links, one per line)
-  2. Choose bitrate (64 / 128 / 192 / 256 / 320)
-  3. Choose save folder (default: Downloads\TubeTone)
-  4. Click "Download MP3"
+If you only see Download MP3 / Cancel / Clear with NO Convert / Tools / Library tabs,
+you are running an old install. Uninstall, then reinstall this package.
 
-TIPS
-  - Keep TubeTone.exe open while downloading
-  - If Windows SmartScreen appears: More info → Run anyway
-  - Log file: %LOCALAPPDATA%\TubeTone\launcher.log
-
-Only download content you have the right to use.
+License: activate with your YM- key from the website.
+Default save folder: Downloads\YTMP

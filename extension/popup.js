@@ -294,7 +294,7 @@ async function getYoutubeCookiesNetscape() {
     ".youtube-nocookie.com",
   ];
   const seen = new Set();
-  const rows = ["# Netscape HTTP Cookie File", "# TubeTone auto-export"];
+  const rows = ["# Netscape HTTP Cookie File", "# YTMP auto-export"];
 
   for (const domain of domains) {
     let list = [];
@@ -562,7 +562,7 @@ async function saveMp3Blob(blob, filename) {
   try {
     await chrome.downloads.download({
       url,
-      filename: mode === "ask" ? filename : `TubeTone/${filename}`,
+      filename: mode === "ask" ? filename : `YTMP/${filename}`,
       saveAs: mode === "ask",
     });
   } finally {
