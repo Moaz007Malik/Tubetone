@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { AdminShell } from "@/components/AdminShell";
 import { api } from "@/lib/api";
 
 type Coupon = {
@@ -54,54 +53,59 @@ export default function CouponsPage() {
   }
 
   return (
-    <AdminShell>
-      <h2 className="text-2xl font-semibold">Coupons</h2>
-      <form onSubmit={create} className="mt-4 flex flex-wrap gap-2">
+    <>
+      <header>
+        <h2 className="page-title">Coupons</h2>
+        <p className="page-sub">Promo codes for free days, percent off, or fixed value.</p>
+      </header>
+
+      <form onSubmit={create} className="toolbar mt-5">
         <input
-          className="rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+          className="field max-w-[10rem] uppercase"
           placeholder="CODE"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
         />
-        <select
-          className="rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-        >
+        <select className="field w-auto" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="free_days">free_days</option>
           <option value="percent">percent</option>
           <option value="fixed">fixed</option>
         </select>
         <input
-          className="w-24 rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+          className="field w-24"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           required
         />
-        <button className="rounded-lg bg-[#2dd4bf] px-4 py-2 font-semibold text-[#042f2e]">
+        <button type="submit" className="btn btn-primary">
           Add coupon
         </button>
       </form>
+
       <ul className="mt-6 space-y-2">
-        {coupons.map((c) => (
-          <li
-            key={c.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#2a4558] bg-[#12202b] px-4 py-3"
-          >
-            <div>
-              <p className="font-mono text-[#2dd4bf]">{c.code}</p>
-              <p className="text-xs text-[#7a96a8]">
-                {c.type}={c.value} · used {c.usedCount}
-                {c.maxUses ? `/${c.maxUses}` : ""} · {c.active ? "active" : "off"}
-              </p>
-            </div>
-            <button className="rounded bg-[#2a4558] px-3 py-1 text-xs" onClick={() => toggle(c)}>
-              {c.active ? "Disable" : "Enable"}
-            </button>
-          </li>
-        ))}
+        {coupons.length === 0 ? (
+          <li className="text-sm text-[var(--muted)]">No coupons yet.</li>
+        ) : (
+          coupons.map((c) => (
+            <li
+              key={c.id}
+              className="panel flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+            >
+              <div>
+                <p className="mono text-[var(--accent)]">{c.code}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                  {c.type}={c.value} · used {c.usedCount}
+                  {c.maxUses ? `/${c.maxUses}` : ""} · {c.active ? "active" : "off"}
+                </p>
+              </div>
+              <button type="button" className="btn btn-muted btn-sm" onClick={() => toggle(c)}>
+                {c.active ? "Disable" : "Enable"}
+              </button>
+            </li>
+          ))
+        )}
       </ul>
-    </AdminShell>
+    </>
   );
 }

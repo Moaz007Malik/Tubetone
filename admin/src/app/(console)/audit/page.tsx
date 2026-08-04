@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AdminShell } from "@/components/AdminShell";
 import { api } from "@/lib/api";
 
 type Log = {
@@ -29,40 +28,40 @@ export default function AuditPage() {
   }, [load]);
 
   return (
-    <AdminShell>
-      <h2 className="text-2xl font-semibold">Audit log</h2>
-      <p className="mt-1 text-sm text-[#7a96a8]">
-        Admin actions, license changes, and email delivery attempts.
-      </p>
-      <div className="mt-4 flex gap-2">
+    <>
+      <header>
+        <h2 className="page-title">Audit log</h2>
+        <p className="page-sub">Admin actions, license changes, and email delivery attempts.</p>
+      </header>
+
+      <div className="toolbar mt-5">
         <input
-          className="rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+          className="field max-w-xs"
           placeholder="Filter action (e.g. revoke, email)"
           value={action}
           onChange={(e) => setAction(e.target.value)}
         />
-        <button className="rounded-lg bg-[#2a4558] px-3 py-2" onClick={load}>
+        <button type="button" className="btn btn-ghost" onClick={load}>
           Refresh
         </button>
       </div>
-      {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+
+      {error ? <p className="alert-err">{error}</p> : null}
+
       <ul className="mt-6 space-y-2">
         {logs.length === 0 ? (
-          <li className="text-sm text-[#7a96a8]">No audit entries yet.</li>
+          <li className="text-sm text-[var(--muted)]">No audit entries yet.</li>
         ) : (
           logs.map((l) => (
-            <li
-              key={l.id}
-              className="rounded-xl border border-[#2a4558] bg-[#12202b] px-4 py-3 text-sm"
-            >
+            <li key={l.id} className="panel px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[#2dd4bf]">{l.action}</span>
-                <span className="text-xs text-[#7a96a8]">
+                <span className="mono text-[var(--accent)]">{l.action}</span>
+                <span className="text-xs text-[var(--muted)]">
                   {new Date(l.createdAt).toLocaleString()}
                 </span>
               </div>
               {l.meta != null ? (
-                <pre className="mt-2 overflow-x-auto text-xs text-[#7a96a8]">
+                <pre className="mono mt-2 overflow-x-auto text-xs text-[var(--muted)]">
                   {JSON.stringify(l.meta, null, 2)}
                 </pre>
               ) : null}
@@ -70,6 +69,6 @@ export default function AuditPage() {
           ))
         )}
       </ul>
-    </AdminShell>
+    </>
   );
 }

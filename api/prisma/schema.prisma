@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // Free cloud Postgres: Neon, Supabase, or Vercel Postgres (not SQLite on Vercel)
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

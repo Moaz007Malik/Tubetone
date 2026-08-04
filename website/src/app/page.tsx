@@ -49,7 +49,7 @@ export default function HomePage() {
             </ul>
           </div>
 
-          <div className="rise rise-delay-2 layer-3d hero__visual">
+          <div className="rise rise-delay-2 hero__visual">
             <Scene3D />
           </div>
         </div>

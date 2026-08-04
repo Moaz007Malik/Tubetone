@@ -1563,6 +1563,7 @@ body.nav-open {
   perspective: 1400px;
   perspective-origin: 50% 42%;
   overflow: visible;
+  isolation: isolate;
 }
 
 .scene3d {
@@ -2031,22 +2032,139 @@ body.nav-open {
   }
 }
 
-@media (max-width: 640px) {
+/* Tablet + phone: flatten float cards (3D rotateY stacks unreadable without depth) */
+@media (max-width: 1023px) {
+  .scene3d-wrap {
+    perspective: 900px;
+    max-width: min(420px, 100%);
+    /* Clip so 3D debris never covers “How it works” / other sections */
+    overflow: hidden;
+    contain: layout paint;
+  }
+
+  .scene3d {
+    overflow: hidden;
+    transform: none !important;
+  }
+
+  /* Disable mouse parallax on touch / narrow layouts */
+  .scene3d-wrap {
+    pointer-events: none;
+  }
+
+  .float-card {
+    /* Pure 2D placement — do not use translateZ/rotate (causes stacking mess) */
+    transform: none !important;
+    animation: card-float-soft 5.5s ease-in-out infinite;
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.65);
+    padding: 0.55rem 0.7rem;
+    border-radius: 12px;
+    z-index: 3;
+  }
+
   .float-card--a {
-    top: 0;
-    left: 0;
+    top: 6%;
+    left: 3%;
+    right: auto;
+    bottom: auto;
+    width: min(44%, 9.5rem);
+  }
+
+  .float-card--b {
+    top: auto;
+    bottom: 8%;
+    left: 3%;
+    right: auto;
+    width: min(48%, 10rem);
+    animation-delay: 0.6s;
+  }
+
+  .float-card--c {
+    top: 10%;
+    right: 3%;
+    left: auto;
+    bottom: auto;
+    width: min(40%, 8.5rem);
+    animation-delay: 1s;
+  }
+
+  .float-card__title {
+    font-size: 0.62rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .float-card__value {
+    font-size: 0.82rem;
+    line-height: 1.15;
+  }
+
+  .float-card__bar {
+    margin-top: 0.4rem;
+    height: 3px;
+  }
+}
+
+@keyframes card-float-soft {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .scene3d-wrap {
+    max-width: min(17.5rem, 82vw);
+    aspect-ratio: 1;
+  }
+
+  /* Quieter orbits on narrow viewports so cards stay legible */
+  .orbit-track {
+    opacity: 0.55;
+  }
+
+  .orbit-track:nth-child(3) {
+    /* outermost ring most likely to look like a vertical pill */
+    display: none;
+  }
+
+  .globe-system {
+    inset: 14% 12% 18% 12%;
+  }
+
+  .float-card--a {
+    top: 5%;
+    left: 2%;
     width: 46%;
   }
+
   .float-card--b {
-    bottom: 0;
-    right: 0;
-    width: 48%;
+    bottom: 6%;
+    left: 2%;
+    width: 50%;
   }
+
   .float-card--c {
-    top: auto;
-    bottom: 22%;
-    right: 0;
-    width: 44%;
+    top: 8%;
+    right: 2%;
+    width: 42%;
+  }
+}
+
+/* Very narrow: hide side cards, keep globe only for a clean hero */
+@media (max-width: 380px) {
+  .float-card {
+    display: none;
+  }
+
+  .scene3d-wrap {
+    max-width: min(15rem, 78vw);
+  }
+
+  .globe-system {
+    inset: 12% 10% 16% 10%;
   }
 }
 
@@ -2496,7 +2614,7 @@ body.nav-open {
   box-sizing: border-box;
 }
 
-/* Hero visual scales down cleanly */
+/* Hero visual scales down cleanly and never paints over following sections */
 .scene3d-wrap {
   width: 100%;
   max-width: min(540px, 100%);
@@ -2656,14 +2774,16 @@ footer .glass-bar {
     gap: 0.75rem;
   }
 
-  /* Scene: cap height so hero stays scannable */
+  /* Scene: compact, contained so float cards never cover sections below */
   .hero__visual {
     margin-inline: auto;
-    max-width: 22rem;
+    max-width: min(17.5rem, 82vw);
+    width: 100%;
   }
 
   .scene3d-wrap {
     max-width: 100%;
+    margin-inline: auto;
   }
 
   /* Reduce deep extrusion shadows a bit on small screens for cleaner layout */

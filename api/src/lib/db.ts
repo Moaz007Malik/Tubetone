@@ -1,14 +1,21 @@
-import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Resolve DATABASE_URL for the runtime.
- * On Vercel, only /tmp is writable — file:./data/* fails and causes login 400s.
+ * Env vars come from Next.js / Vercel (do not import dotenv — breaks webpack build).
+ * Use a free Postgres URL (Neon / Supabase / Vercel Postgres), e.g.:
+ * postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
  */
 function resolveDatabaseUrl(): string {
-  let url = (process.env.DATABASE_URL || "file:./data/tubetone.db").trim();
-  if (process.env.VERCEL && url.startsWith("file:")) {
-    url = "file:/tmp/ytmp.db";
+  const url = (process.env.DATABASE_URL || "").trim();
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is missing. Set a Postgres connection string (Neon free tier works on Vercel)."
+    );
+  }
+  if (url.startsWith("file:")) {
+    throw new Error(
+      "SQLite (file:) is not supported. Use a free Postgres URL from neon.tech or supabase.com."
+    );
   }
   return url;
 }

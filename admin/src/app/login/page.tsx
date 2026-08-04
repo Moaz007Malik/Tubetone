@@ -3,10 +3,11 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { markSessionOk } from "@/components/AdminShell";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@ytmp.app");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,7 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      markSessionOk();
       router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -29,43 +31,71 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center p-6">
+    <main className="relative grid min-h-screen place-items-center overflow-hidden p-6">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 40% at 50% 0%, rgba(61,222,168,0.14), transparent 70%)",
+        }}
+      />
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-xl border border-[#2a4558] bg-[#12202b] p-6 shadow-xl"
+        className="panel relative w-full max-w-md p-7 shadow-[var(--shadow)] sm:p-8"
+        autoComplete="on"
       >
         <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/music-logo.png" alt="YTMP" width={48} height={48} className="rounded-2xl" />
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--accent-dim)] text-base font-bold text-[var(--accent)] ring-1 ring-[color-mix(in_srgb,var(--accent)_30%,transparent)]">
+            YT
+          </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#7a96a8]">YTMP</p>
-            <h1 className="mt-1 text-2xl font-semibold text-[#2dd4bf]">Admin</h1>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+              YTMP
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--accent)]">Admin</h1>
           </div>
         </div>
-        <p className="mt-2 text-sm text-[#7a96a8]">Sign in to manage licenses & orders</p>
-        <label className="mt-6 block text-xs text-[#7a96a8]">Email</label>
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          Sign in to manage licenses, orders, and subscriptions.
+        </p>
+
+        <label className="mt-7 block text-xs font-medium text-[var(--muted)]" htmlFor="admin-email">
+          Email
+        </label>
         <input
-          className="mt-1 w-full rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2 outline-none focus:border-[#2dd4bf]"
+          id="admin-email"
+          className="field mt-1.5"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
+          name="email"
           required
           autoComplete="username"
+          placeholder="Enter email"
+          autoFocus
         />
-        <label className="mt-4 block text-xs text-[#7a96a8]">Password</label>
+
+        <label
+          className="mt-4 block text-xs font-medium text-[var(--muted)]"
+          htmlFor="admin-password"
+        >
+          Password
+        </label>
         <input
-          className="mt-1 w-full rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2 outline-none focus:border-[#2dd4bf]"
+          id="admin-password"
+          className="field mt-1.5"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          name="password"
           required
           autoComplete="current-password"
+          placeholder="Enter password"
         />
-        {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
-        <button
-          disabled={loading}
-          className="mt-6 w-full rounded-lg bg-[#2dd4bf] px-4 py-2.5 font-semibold text-[#042f2e] disabled:opacity-60"
-        >
+
+        {error ? <p className="alert-err">{error}</p> : null}
+
+        <button type="submit" disabled={loading} className="btn btn-primary mt-6 w-full py-2.5">
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>

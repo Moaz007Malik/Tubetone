@@ -38,7 +38,21 @@ launcher/config.defaults.example.json → launcher/config.defaults.json
 | `COOKIE_SECURE` | `true` |
 | `ADMIN_COOKIE_SAMESITE` | `none` if admin + API are different hosts; `lax` if same-site |
 | `DOWNLOAD_URL` | Public URL of `YTMP-Setup.exe` |
-| `DATABASE_URL` | Durable SQLite path on a volume, or Postgres |
+| `DATABASE_URL` | **Postgres** connection string (required on Vercel) |
+
+### Free cloud database (recommended: Neon)
+
+SQLite files do not survive on Vercel. Use free Postgres:
+
+1. Create a project at [https://neon.tech](https://neon.tech) (free tier).
+2. **Connection details** → copy the **pooled** connection string (host contains `-pooler`).
+3. It looks like:  
+   `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require`
+4. Set `DATABASE_URL` on the Vercel **api** project (Production + Preview).
+5. Redeploy — `npm run build` runs `prisma db push` so tables are created.
+6. First login uses `ADMIN_EMAIL` / `ADMIN_PASSWORD` (seeded if no admin exists).
+
+Alternatives (same Prisma URL shape): [Supabase](https://supabase.com) free Postgres, or Vercel Postgres marketplace.
 
 API fails fast on boot if `JWT_SECRET` is weak (`src/instrumentation.ts`).
 
