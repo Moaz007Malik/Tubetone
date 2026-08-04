@@ -177,16 +177,16 @@ export function Scene3D() {
         </div>
 
         <div className="float-card float-card--a">
-          <p className="float-card__title">Download</p>
-          <p className="float-card__value">MP3 · MP4 ready</p>
+          <p className="float-card__title">Sources</p>
+          <p className="float-card__value">YouTube · Spotify · SC</p>
           <div className="float-card__bar">
             <span />
           </div>
         </div>
 
         <div className="float-card float-card--b">
-          <p className="float-card__title">Local convert</p>
-          <p className="float-card__value">Batch folder · offline</p>
+          <p className="float-card__title">Export</p>
+          <p className="float-card__value">MP3 · MP4 · offline</p>
           <div className="float-card__bar">
             <span style={{ width: "54%", background: "linear-gradient(90deg,#38bdf8,#6366f1)" }} />
           </div>

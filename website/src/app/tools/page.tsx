@@ -7,7 +7,9 @@ const tools = [
   {
     name: "Download",
     items: [
-      "YouTube, SoundCloud, Vimeo, and more",
+      "YouTube, Spotify, SoundCloud, Vimeo, and more",
+      "Spotify tracks / albums / playlists → MP3",
+      "SoundCloud tracks and sets as audio",
       "MP3 / M4A / WAV / FLAC / Opus / MP4",
       "Playlists, bulk paste, import .txt",
       "Optional EN subtitles + thumbnails",
@@ -33,7 +35,7 @@ export default function ToolsPage() {
       <PageHero
         kicker="Windows app"
         title="The toolkit"
-        lead="Same workspaces as the installer: Download, Convert, Library."
+        lead="Download from YouTube, Spotify, SoundCloud and more — plus Convert and Library workspaces."
       />
       <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 md:grid-cols-3">
         {tools.map((t, idx) => (

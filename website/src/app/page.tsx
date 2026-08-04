@@ -17,11 +17,11 @@ export default function HomePage() {
             </div>
             <h1 className="hero-brand rise rise-delay-1 mt-3 sm:mt-4">YTMP</h1>
             <p className="hero-line rise rise-delay-2 mt-3 sm:mt-4 max-w-xl">
-              Local media toolkit for download & convert
+              Download YouTube, Spotify, SoundCloud & more
             </p>
             <p className="hero-sub rise rise-delay-2 mt-3 sm:mt-4 max-w-md">
-              Paste links or open local files. Save audio and video, convert folders, and keep
-              everything private on your PC — no cloud upload.
+              Paste links from major platforms or open local files. Save MP3/MP4, convert folders,
+              and keep everything on your PC — no cloud upload.
             </p>
             <div className="btn-row rise rise-delay-3 mt-6 sm:mt-8">
               {canDownload ? (
@@ -43,9 +43,10 @@ export default function HomePage() {
               </Link>
             </div>
             <ul className="hero-pills rise rise-delay-4 mt-2">
-              <li>Runs offline</li>
-              <li>ffmpeg included</li>
-              <li>Simple license key</li>
+              <li>YouTube</li>
+              <li>Spotify</li>
+              <li>SoundCloud</li>
+              <li>MP3 · MP4</li>
             </ul>
           </div>
 
@@ -78,7 +79,7 @@ export default function HomePage() {
             [
               "03",
               "Create",
-              "Download, Convert, Library — all offline.",
+              "Paste YouTube, Spotify, or SoundCloud links — convert offline.",
               "linear-gradient(135deg,#38bdf8,#6366f1)",
             ],
           ].map(([n, title, body, grad], i) => (
@@ -110,7 +111,7 @@ export default function HomePage() {
             {[
               {
                 t: "Download",
-                d: "Playlists & bulk links. Music MP3 or Video MP4 — your quality.",
+                d: "YouTube, Spotify, SoundCloud & more — playlists, bulk paste, MP3 or MP4.",
                 g: "from-[#a78bfa] to-[#38bdf8]",
               },
               {
@@ -142,13 +143,13 @@ export default function HomePage() {
         </div>
         <div className="grid-3d grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Multi-site", "YouTube and sites yt-dlp supports"],
-            ["Playlists", "Full list or first-N limit"],
+            ["YouTube", "Videos, Shorts, Music, playlists"],
+            ["Spotify", "Tracks, albums, playlists → MP3"],
+            ["SoundCloud", "Tracks and sets as audio"],
+            ["More sites", "Vimeo, X/Twitter media, and more"],
             ["Formats", "MP3, M4A, WAV, FLAC, Opus, MP4"],
             ["Batch convert", "Folders of local media"],
             ["History", "Search, reopen, CSV / M3U"],
-            ["License check", "Online keys with offline grace"],
-            ["Cancel queue", "Stop jobs without kill apps"],
             ["ffmpeg pack", "Installer ships the tools"],
           ].map(([t, d], i) => (
             <Tilt3D key={t} className="feature-tile card-3d" max={8} lift={16} style={{ ["--i" as string]: i }}>

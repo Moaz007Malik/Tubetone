@@ -32,6 +32,7 @@ import license_client
 import media_tools
 import settings_store
 import glass_ui
+import spotify_support
 from glass_ui import (
     G,
     Atmosphere,
@@ -220,6 +221,9 @@ def normalize_url(text: str) -> str | None:
     text = text.strip()
     if not text:
         return None
+    # Spotify first (before generic http match)
+    if spotify_support.is_spotify_url(text):
+        return spotify_support.normalize_spotify_url(text)
     m = YT_RE.search(text)
     if m:
         url = m.group(0)
@@ -276,11 +280,22 @@ def normalize_url(text: str) -> str | None:
 
 def is_playlist_url(url: str) -> bool:
     low = (url or "").lower()
+    if spotify_support.is_spotify_url(url):
+        return spotify_support.is_spotify_collection(url)
     return "list=" in low or "/playlist" in low
 
 
 def single_video_url(url: str) -> str:
     """If a watch URL also has list=, keep only the single video."""
+    if spotify_support.is_spotify_url(url):
+        # Collections without "full playlist" → download first track only
+        try:
+            tracks = spotify_support.fetch_spotify_tracks(url, limit=1)
+            if tracks and tracks[0].get("download_url"):
+                return str(tracks[0]["download_url"])
+        except Exception:
+            pass
+        return url
     try:
         from urllib.parse import parse_qs, urlparse
 
@@ -292,6 +307,24 @@ def single_video_url(url: str) -> str:
     except Exception:
         pass
     return url
+
+
+def expand_url_to_queue(url: str, *, allow_playlists: bool, limit: int = 0) -> list[str]:
+    """Expand one user URL into downloadable engine URLs."""
+    if spotify_support.is_spotify_url(url):
+        if allow_playlists or not spotify_support.is_spotify_collection(url):
+            return spotify_support.expand_spotify_to_download_urls(
+                url, limit=limit if limit > 0 else 0
+            )
+        return [single_video_url(url)]
+    if allow_playlists and is_playlist_url(url) and _tubetone is not None:
+        items = _tubetone.expand_playlist(url, limit=limit if limit > 0 else None)
+        if items:
+            return items
+        return [single_video_url(url)]
+    if is_playlist_url(url) and not allow_playlists:
+        return [single_video_url(url)]
+    return [url]
 
 
 def download_one(
@@ -605,7 +638,7 @@ def run_gui() -> None:
     section_label(
         card_inner,
         "Add links",
-        "Single videos or full playlists — YouTube, SoundCloud, and more — one URL per line",
+        "Single videos, playlists, or Spotify links — YouTube, Spotify, SoundCloud, and more — one URL per line",
         step="1",
     )
 
@@ -691,22 +724,36 @@ def run_gui() -> None:
     def preview_info() -> None:
         urls = parse_urls()
         if not urls:
-            messagebox.showwarning("Preview", "Add at least one YouTube link first.")
+            messagebox.showwarning("Preview", "Add at least one YouTube or Spotify link first.")
             return
-        if not _tubetone:
+        if not _tubetone and not any(spotify_support.is_spotify_url(u) for u in urls):
             messagebox.showwarning("Preview", "Engine not ready yet.")
             return
 
         def worker() -> None:
             try:
                 set_progress(5, "Fetching info…")
-                info = _tubetone.fetch_info(urls[0])
-                if info.get("is_playlist"):
-                    msg = f"Playlist · {info.get('playlist_count') or '?'} items · {info.get('title')}"
+                u0 = urls[0]
+                if spotify_support.is_spotify_url(u0):
+                    lim = 0
+                    try:
+                        lim = int(plimit_var.get() or "0")
+                    except Exception:
+                        lim = 0
+                    msg = spotify_support.spotify_preview_label(
+                        u0, limit=lim if lim > 0 else 0
+                    )
+                    msg += " · saves as MP3 via YouTube match"
                 else:
-                    dur = info.get("duration_label") or "?"
-                    up = info.get("uploader") or "Unknown"
-                    msg = f"{info.get('title')} · {dur} · {up}"
+                    if not _tubetone:
+                        raise RuntimeError("Engine not ready")
+                    info = _tubetone.fetch_info(u0)
+                    if info.get("is_playlist"):
+                        msg = f"Playlist · {info.get('playlist_count') or '?'} items · {info.get('title')}"
+                    else:
+                        dur = info.get("duration_label") or "?"
+                        up = info.get("uploader") or "Unknown"
+                        msg = f"{info.get('title')} · {dur} · {up}"
                 root.after(0, lambda: info_var.set(msg))
                 set_progress(0, "Preview ready")
             except Exception as exc:
@@ -1053,9 +1100,26 @@ def run_gui() -> None:
             return
         urls = parse_urls()
         if not urls:
-            messagebox.showwarning("No URL", "Paste at least one valid YouTube link or playlist.")
+            messagebox.showwarning(
+                "No URL",
+                "Paste at least one valid YouTube, Spotify, or other media link.",
+            )
             return
         mode = mode_var.get()
+        has_spotify = any(spotify_support.is_spotify_url(u) for u in urls)
+        if has_spotify and mode == "video":
+            if not messagebox.askyesno(
+                "Spotify → MP3",
+                "Spotify links are always saved as music (MP3 / audio), not video.\n\n"
+                "Continue in Music mode for those links?",
+            ):
+                return
+            mode = "music"
+            mode_var.set("music")
+            try:
+                music_btn.select("music")
+            except Exception:
+                pass
         try:
             bitrate = int(bitrate_var.get())
         except ValueError:
@@ -1082,26 +1146,39 @@ def run_gui() -> None:
             try:
                 set_progress(
                     0,
-                    "Expanding playlists…" if allow_playlists else "Preparing queue…",
+                    "Resolving Spotify / playlists…"
+                    if has_spotify or allow_playlists
+                    else "Preparing queue…",
                 )
                 expanded: list[str] = []
                 for u in urls:
                     if cancel_flag["on"]:
                         break
                     try:
-                        if allow_playlists and is_playlist_url(u) and _tubetone is not None:
+                        if spotify_support.is_spotify_url(u):
+                            set_progress(0, f"Reading Spotify… {u[:70]}")
+                            items = expand_url_to_queue(
+                                u, allow_playlists=allow_playlists, limit=plimit
+                            )
+                            expanded.extend(items)
+                        elif allow_playlists and is_playlist_url(u) and _tubetone is not None:
                             set_progress(0, f"Reading playlist… {u[:60]}")
-                            items = _tubetone.expand_playlist(u, limit=plimit)
+                            items = expand_url_to_queue(
+                                u, allow_playlists=True, limit=plimit
+                            )
                             if not items:
                                 items = [single_video_url(u)]
                             expanded.extend(items)
                         elif is_playlist_url(u) and not allow_playlists:
-                            # Watch URLs with list= → only that one video
                             expanded.append(single_video_url(u))
                         else:
                             expanded.append(u)
-                    except Exception:
-                        expanded.append(single_video_url(u) if is_playlist_url(u) else u)
+                    except Exception as exc:
+                        write_log(f"expand failed for {u}: {exc}\n{traceback.format_exc()}")
+                        if spotify_support.is_spotify_url(u):
+                            set_progress(0, f"Spotify resolve failed: {exc}")
+                        else:
+                            expanded.append(single_video_url(u) if is_playlist_url(u) else u)
                 # de-dupe
                 seen: set[str] = set()
                 final_urls: list[str] = []
@@ -1111,12 +1188,13 @@ def run_gui() -> None:
                         final_urls.append(u)
 
                 if not final_urls:
-                    set_progress(0, "No videos found in playlist / links")
+                    set_progress(0, "No tracks found")
                     root.after(
                         0,
                         lambda: messagebox.showwarning(
-                            "Playlist",
-                            "No videos found. Check the link or turn on “Download full playlists”.",
+                            "Queue empty",
+                            "No downloadable tracks found. Check the link, "
+                            "or enable “Download full playlists” for albums/playlists.",
                         ),
                     )
                     return
@@ -1124,24 +1202,36 @@ def run_gui() -> None:
                 set_progress(
                     0,
                     f"Queue: {len(final_urls)} item(s)"
-                    + (" from playlist(s)" if any(is_playlist_url(x) for x in urls) else ""),
+                    + (
+                        " (Spotify → YouTube match)"
+                        if has_spotify
+                        else (
+                            " from playlist(s)"
+                            if any(is_playlist_url(x) for x in urls)
+                            else ""
+                        )
+                    ),
                 )
                 for i, url in enumerate(final_urls, 1):
                     if cancel_flag["on"]:
                         set_progress(i / max(len(final_urls), 1) * 100, "Cancelled")
                         break
+                    item_mode = mode
+                    # Spotify matches (ytsearch) and pure Spotify queues are always audio/MP3
+                    if url.startswith("ytsearch") or has_spotify:
+                        item_mode = "music"
                     set_progress(
                         (i - 1) / len(final_urls) * 100,
-                        f"{label} {i}/{len(final_urls)} · starting…",
-                        url,
+                        f"{'Video' if item_mode == 'video' else 'Track'} {i}/{len(final_urls)} · starting…",
+                        url[:80],
                     )
                     try:
                         dest = download_one(
                             url,
                             bitrate,
                             out_dir,
-                            progress_hooks=[make_hook(i, len(final_urls), url, mode)],
-                            mode=mode,
+                            progress_hooks=[make_hook(i, len(final_urls), url, item_mode)],
+                            mode=item_mode,
                             quality=quality,
                             filename_template=tmpl,
                             audio_format=audio_format,
@@ -1154,7 +1244,7 @@ def run_gui() -> None:
                             {
                                 "title": dest.stem,
                                 "path": str(dest),
-                                "mode": mode,
+                                "mode": item_mode,
                                 "url": url,
                             }
                         )

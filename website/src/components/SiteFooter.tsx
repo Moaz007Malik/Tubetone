@@ -9,7 +9,7 @@ export function SiteFooter() {
           <div>
             <BrandLogo size={42} showWordmark wordmarkClassName="logo-type text-xl tracking-[-0.04em]" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--muted)]">
-              Local media toolkit for Windows. Download, convert, edit — licensed, private, offline.
+              YouTube, Spotify, SoundCloud & more — download, convert, keep files private on Windows.
             </p>
           </div>
           <div>

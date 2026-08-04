@@ -31,6 +31,7 @@ python -m PyInstaller ^
   --hidden-import ytdlp_updater ^
   --hidden-import media_tools ^
   --hidden-import glass_ui ^
+  --hidden-import spotify_support ^
   --paths "..\server" ^
   --paths "." ^
   tubetone_app.py

@@ -4,8 +4,20 @@ export const metadata = { title: "Features" };
 
 const features = [
   {
-    title: "Multi-site download",
-    body: "Paste URLs from YouTube and many other sites yt-dlp supports — not YouTube-only.",
+    title: "YouTube",
+    body: "Videos, Shorts, Music, and playlists — save as MP3 or MP4 at the quality you choose.",
+  },
+  {
+    title: "Spotify",
+    body: "Paste track, album, or playlist links. YTMP resolves tracks and exports them as MP3 on your PC.",
+  },
+  {
+    title: "SoundCloud",
+    body: "Download SoundCloud tracks and sets as audio — same Music workflow as YouTube.",
+  },
+  {
+    title: "More sites",
+    body: "Vimeo, X/Twitter media, and many other links yt-dlp supports — not locked to one platform.",
   },
   {
     title: "Audio formats",
@@ -13,19 +25,15 @@ const features = [
   },
   {
     title: "Video downloads",
-    body: "Save MP4 at the quality you choose, with local ffmpeg merge.",
+    body: "Save MP4 with local ffmpeg merge — height and quality options.",
   },
   {
     title: "Playlists & bulk",
-    body: "Full playlists or first-N, plus paste lists and import .txt files.",
+    body: "Full playlists or first-N, multi-line paste, and import .txt lists.",
   },
   {
     title: "Convert & batch",
-    body: "Convert a single file or an entire folder to another format.",
-  },
-  {
-    title: "Cancel anytime",
-    body: "Stop an in-progress queue without killing the app.",
+    body: "Convert a single local file or an entire folder — no upload.",
   },
   {
     title: "Online license",
@@ -33,7 +41,7 @@ const features = [
   },
   {
     title: "Local & private",
-    body: "Files stay on your PC. ffmpeg ships with the installer.",
+    body: "Files stay on your PC. ffmpeg ships with the Windows installer.",
   },
 ];
 
@@ -42,8 +50,8 @@ export default function FeaturesPage() {
     <PageShell>
       <PageHero
         kicker="Capabilities"
-        title="Built for glossy offline craft"
-        lead="YTMP is a local media toolkit — download from the web, convert without uploads."
+        title="YouTube, Spotify, SoundCloud & more"
+        lead="One Windows app to grab web media and convert local files — offline toolkits, no cloud upload."
       />
       <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         {features.map((f, i) => (

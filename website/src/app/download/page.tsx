@@ -12,7 +12,7 @@ export default function DownloadPage() {
       <PageHero
         kicker="Installer"
         title="Download YTMP"
-        lead="Windows setup includes the app and ffmpeg. Activate after install with your license key."
+        lead="Windows setup includes the app and ffmpeg. Download from YouTube, Spotify, SoundCloud, and more — activate with your license key after install."
       />
 
       {canDownload ? (
@@ -33,6 +33,12 @@ export default function DownloadPage() {
           <p className="mt-4 text-sm text-[var(--muted)]">
             File: <span className="font-mono text-[var(--ink-soft)]">YTMP-Setup.exe</span> · Windows
           </p>
+          <ul className="hero-pills mt-5">
+            <li>YouTube</li>
+            <li>Spotify</li>
+            <li>SoundCloud</li>
+            <li>Local convert</li>
+          </ul>
         </>
       ) : (
         <div className="prose-panel">
@@ -59,7 +65,7 @@ export default function DownloadPage() {
         <li className="step-row">
           <span className="step-badge step-badge--mint">03</span>
           <span className="text-sm text-[var(--muted)] md:text-base">
-            Paste links or convert local files offline
+            Paste YouTube, Spotify, SoundCloud, or other links — or convert local files offline
           </span>
         </li>
       </ul>

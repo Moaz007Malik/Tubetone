@@ -40,11 +40,11 @@ const mono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "YTMP — Local media toolkit for Windows",
+    default: "YTMP — YouTube, Spotify, SoundCloud for Windows",
     template: "%s · YTMP",
   },
   description:
-    "Download from the web, convert and edit media locally. Windows app with license activation — files stay on your PC.",
+    "Download from YouTube, Spotify, SoundCloud and more. Convert media locally on Windows — files stay on your PC.",
   icons: {
     icon: [
       { url: "/music-logo.png", type: "image/png" },

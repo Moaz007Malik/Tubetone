@@ -5,7 +5,7 @@ export const metadata = { title: "Docs" };
 const sections = [
   {
     h: "Download",
-    p: "Paste one or more http(s) links. Choose Music or Video. For audio, pick format and bitrate. Playlists expand when enabled; set limit for first-N only.",
+    p: "Paste YouTube, Spotify (track/album/playlist), SoundCloud, or other http(s) links. Music mode saves MP3 (and more formats). Spotify always exports as audio. Playlists expand when enabled.",
   },
   {
     h: "Convert",
@@ -27,7 +27,7 @@ export default function DocsPage() {
       <PageHero
         kicker="Reference"
         title="Docs"
-        lead="How the Windows app behaves day to day."
+        lead="Download (YouTube, Spotify, SoundCloud…), convert, and license checks."
       />
       <div className="space-y-4">
         {sections.map((s) => (
