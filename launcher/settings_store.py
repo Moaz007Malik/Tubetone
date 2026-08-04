@@ -17,6 +17,7 @@ DEFAULTS = {
     "outDir": str(Path.home() / "Downloads" / "YTMP"),
     "filenameTemplate": "%(title)s [%(id)s]",
     "playlistLimit": "0",
+    "downloadPlaylists": True,
 }
 
 

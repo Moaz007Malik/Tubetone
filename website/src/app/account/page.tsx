@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { api } from "@/lib/api";
+import { Field, PageHero, PageShell } from "@/components/PageShell";
 
 type Account = {
   email: string;
@@ -36,49 +37,42 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="sans mx-auto max-w-3xl px-5 py-16">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#2dd4bf]">Account</h1>
-      <form onSubmit={lookup} className="mt-6 space-y-3 rounded-2xl border border-[#2a4558] bg-[#12202b] p-6">
-        <input
-          className="w-full rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+    <PageShell narrow>
+      <PageHero kicker="License" title="Account" lead="Look up plan status with your email and key." />
+      <form onSubmit={lookup} className="surface space-y-3">
+        <Field
           placeholder="Email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <input
-          className="w-full rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+        <Field
           placeholder="License key"
           required
           value={key}
           onChange={(e) => setKey(e.target.value)}
         />
-        <button className="rounded-lg bg-[#2dd4bf] px-4 py-2 font-semibold text-[#042f2e]">
+        <button type="submit" className="btn-primary">
           Check status
         </button>
       </form>
-      {error ? <p className="mt-4 text-red-400">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-[var(--danger)]">{error}</p> : null}
       {data ? (
-        <div className="mt-6 rounded-2xl border border-[#2a4558] bg-[#12202b] p-6">
-          <p>
-            Status:{" "}
-            <strong className={data.valid ? "text-emerald-400" : "text-red-400"}>
-              {data.valid ? "Active" : data.reason || data.status}
-            </strong>
-          </p>
-          <p className="mt-2 text-sm text-[#7a96a8]">
+        <div className="surface mt-6">
+          <span className="status-chip">{data.valid ? "Active" : data.reason || data.status}</span>
+          <p className="mt-4 text-sm text-[var(--muted)]">
             Plan {data.plan} · ends {new Date(data.endsAt).toLocaleString()}
           </p>
-          <ul className="mt-4 space-y-1 text-sm">
+          <ul className="mt-4 space-y-2 text-sm text-[var(--muted)]">
             {data.devices.map((d, i) => (
-              <li key={i}>
+              <li key={i} className="step-row !py-3">
                 {d.machineName || "Device"} · last seen {new Date(d.lastSeenAt).toLocaleString()}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
-    </main>
+    </PageShell>
   );
 }

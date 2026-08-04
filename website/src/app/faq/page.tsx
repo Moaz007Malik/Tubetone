@@ -1,9 +1,11 @@
+import { PageHero, PageShell } from "@/components/PageShell";
+
 export const metadata = { title: "FAQ" };
 
 const faqs = [
   {
     q: "Is YTMP only for YouTube MP3?",
-    a: "No. Download from many sites yt-dlp supports, export several audio formats or MP4, and use Convert / Tools for local files.",
+    a: "No. Download from many sites yt-dlp supports, export audio or MP4, and convert local files.",
   },
   {
     q: "Do I need Python or Chrome?",
@@ -11,42 +13,38 @@ const faqs = [
   },
   {
     q: "How do payments work?",
-    a: "Request access on Pricing, pay manually (as instructed), then an admin marks the order paid and you receive a license key by email (when SMTP is configured).",
+    a: "Request access on Pricing, pay as instructed, then an admin marks the order paid and you receive a key.",
   },
   {
     q: "Can I use YTMP offline?",
-    a: "Downloads need network access to the source site. Convert/Tools need local files + ffmpeg. License checks allow a short offline grace period.",
-  },
-  {
-    q: "What happens if my license is revoked?",
-    a: "The next heartbeat fails and downloads / tool jobs lock until the subscription is reinstated.",
+    a: "Downloads need network access to the source. Convert runs locally. License checks allow a short offline grace period.",
   },
   {
     q: "Playlists?",
-    a: "Paste a playlist URL. Use playlist limit in the app to download only the first N videos.",
+    a: "Paste a playlist URL with “Download full playlists” on. Limit 0 = all videos.",
   },
   {
     q: "Where are files saved?",
-    a: "Default is Downloads\\YTMP. You can change the folder in the app — Convert and Tools use the same output folder.",
+    a: "Default is Downloads\\YTMP. Change it in the app.",
   },
   {
     q: "Does convert upload my files?",
-    a: "No. Convert and Tools run locally with ffmpeg on your PC.",
+    a: "No. Convert runs with ffmpeg on your PC.",
   },
 ];
 
 export default function FaqPage() {
   return (
-    <main className="sans mx-auto max-w-3xl px-5 py-16">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#2dd4bf]">FAQ</h1>
-      <dl className="mt-10 space-y-6">
+    <PageShell narrow>
+      <PageHero kicker="Help" title="FAQ" lead="Short answers to the questions we hear most." />
+      <div className="faq-list">
         {faqs.map((f) => (
-          <div key={f.q} className="rounded-2xl border border-[#2a4558] bg-[#12202b] p-5">
-            <dt className="font-semibold">{f.q}</dt>
-            <dd className="mt-2 text-sm text-[#7a96a8]">{f.a}</dd>
-          </div>
+          <article key={f.q} className="faq-item">
+            <h2 className="faq-q">{f.q}</h2>
+            <p className="faq-a">{f.a}</p>
+          </article>
         ))}
-      </dl>
-    </main>
+      </div>
+    </PageShell>
   );
 }

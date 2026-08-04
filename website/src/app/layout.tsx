@@ -1,90 +1,69 @@
 import type { Metadata } from "next";
-import { Outfit, Source_Sans_3 } from "next/font/google";
-import Link from "next/link";
+import { IBM_Plex_Mono, Outfit } from "next/font/google";
+import localFont from "next/font/local";
+import { GradientBg } from "@/components/GradientBg";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
-const display = Outfit({
-  subsets: ["latin"],
+/**
+ * Display / logo face — Cal Sans (SIL Open Font License, free)
+ * Geometric modern display font in the same logo/showreel class as commercial
+ * Nexxa (Envato). Self-hosted from @fontsource/cal-sans — no purchase needed.
+ * Body: Outfit (Google Fonts, free). Mono: IBM Plex Mono.
+ */
+const logo = localFont({
+  src: "../fonts/CalSans-Regular.woff2",
+  variable: "--font-logo",
+  weight: "400",
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+});
+
+const display = localFont({
+  src: "../fonts/CalSans-Regular.woff2",
   variable: "--font-display",
+  weight: "400",
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+});
+
+const sans = Outfit({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const sans = Source_Sans_3({
+const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-mono",
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "YTMP — Download, Convert & Edit Media",
+    default: "YTMP — Local media toolkit for Windows",
     template: "%s · YTMP",
   },
   description:
-    "Local Windows media toolkit: download from YouTube and more, convert, trim, compress, GIF, and polish audio — with a subscription license.",
+    "Download from the web, convert and edit media locally. Windows app with license activation — files stay on your PC.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html
+      lang="en"
+      className={`${logo.variable} ${display.variable} ${sans.variable} ${mono.variable}`}
+    >
       <body>
-        <header className="sans border-b border-[#2a4558]/bg-[#0a1219]/70 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-            <Link href="/" className="text-xl font-semibold tracking-tight text-[#2dd4bf] no-underline">
-              YTMP
-            </Link>
-            <nav className="flex flex-wrap gap-4 text-sm text-[#7a96a8]">
-              <Link href="/features" className="no-underline hover:text-white">
-                Features
-              </Link>
-              <Link href="/tools" className="no-underline hover:text-white">
-                Toolkit
-              </Link>
-              <Link href="/pricing" className="no-underline hover:text-white">
-                Pricing
-              </Link>
-              <Link href="/download" className="no-underline hover:text-white">
-                Download
-              </Link>
-              <Link href="/status" className="no-underline hover:text-white">
-                Order status
-              </Link>
-              <Link href="/faq" className="no-underline hover:text-white">
-                FAQ
-              </Link>
-              <Link href="/support" className="no-underline hover:text-white">
-                Support
-              </Link>
-              <Link href="/activate" className="no-underline hover:text-white">
-                Activate
-              </Link>
-              <Link href="/account" className="no-underline hover:text-white">
-                Account
-              </Link>
-            </nav>
-          </div>
-        </header>
-        {children}
-        <footer className="sans mt-20 border-t border-[#2a4558] py-10 text-center text-sm text-[#7a96a8]">
-          <p>
-            <Link href="/legal/terms" className="no-underline hover:text-white">
-              Terms
-            </Link>
-            {" · "}
-            <Link href="/legal/privacy" className="no-underline hover:text-white">
-              Privacy
-            </Link>
-            {" · "}
-            <Link href="/changelog" className="no-underline hover:text-white">
-              Changelog
-            </Link>
-            {" · "}
-            <Link href="/docs" className="no-underline hover:text-white">
-              Docs
-            </Link>
-          </p>
-          <p className="mt-2">Only download content you have the right to use.</p>
-        </footer>
+        <GradientBg intensity="hero" />
+        <div className="site-shell">
+          <SiteHeader />
+          <div className="site-main">{children}</div>
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );

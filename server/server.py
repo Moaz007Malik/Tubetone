@@ -258,12 +258,15 @@ def expand_playlist(
 ) -> list[str]:
     """Return video URLs. Single videos return [url]. Playlists return entry URLs."""
     opts = ydl_base_opts(cookiefile)
+    # ydl_base sets noplaylist=True (single-video default); force playlist expand here
+    opts["noplaylist"] = False
     opts.update(
         {
             "skip_download": True,
             "extract_flat": "in_playlist",
             "quiet": True,
             "no_warnings": True,
+            "ignoreerrors": True,
         }
     )
     with yt_dlp.YoutubeDL(opts) as ydl:
@@ -283,8 +286,22 @@ def expand_playlist(
                 urls.append(f"https://www.youtube.com/watch?v={vid}")
             if limit and len(urls) >= limit:
                 break
-        return urls or [url]
+        return urls or [single_video_safe(url)]
     return [url]
+
+
+def single_video_safe(url: str) -> str:
+    try:
+        from urllib.parse import parse_qs, urlparse
+
+        u = urlparse(url)
+        if "v=" in (u.query or ""):
+            vid = (parse_qs(u.query).get("v") or [None])[0]
+            if vid:
+                return f"https://www.youtube.com/watch?v={vid}"
+    except Exception:
+        pass
+    return url
 
 
 class DownloadCancelled(Exception):

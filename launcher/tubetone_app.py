@@ -69,7 +69,8 @@ FFMPEG_ZIP_URLS = (
 )
 
 YT_RE = re.compile(
-    r"(https?://)?(www\.|m\.|music\.)?(youtube\.com/(watch\?v=|shorts/|embed/|live/)|youtu\.be/)[\w-]+",
+    r"(https?://)?(www\.|m\.|music\.)?"
+    r"(youtube\.com/[^\s<>\"']+|youtu\.be/[^\s<>\"']+)",
     re.I,
 )
 URL_RE = re.compile(r"https?://[^\s<>\"']+", re.I)
@@ -228,17 +229,38 @@ def normalize_url(text: str) -> str | None:
             from urllib.parse import parse_qs, urlparse
 
             u = urlparse(url)
-            host = u.hostname.replace("www.", "") if u.hostname else ""
+            host = (u.hostname or "").replace("www.", "")
             if host == "youtu.be":
-                vid = u.pathname.strip("/").split("/")[0]
-                return f"https://www.youtube.com/watch?v={vid}" if vid else None
-            if "youtube.com" in host:
-                if u.pathname == "/watch":
-                    vid = parse_qs(u.query).get("v", [None])[0]
-                    return f"https://www.youtube.com/watch?v={vid}" if vid else None
+                vid = (u.path or "").strip("/").split("/")[0]
+                if not vid:
+                    return None
+                list_id = (parse_qs(u.query).get("list") or [None])[0]
+                if list_id:
+                    return f"https://www.youtube.com/watch?v={vid}&list={list_id}"
+                return f"https://www.youtube.com/watch?v={vid}"
+            if (
+                "youtube.com" in host
+                or "youtube-nocookie.com" in host
+                or host == "music.youtube.com"
+            ):
+                path = (u.path or "").rstrip("/")
+                qs = parse_qs(u.query)
+                if path.endswith("/playlist") or path == "/playlist":
+                    list_id = (qs.get("list") or [None])[0]
+                    if list_id:
+                        return f"https://www.youtube.com/playlist?list={list_id}"
+                    return url
+                if path == "/watch" or path.endswith("/watch"):
+                    vid = (qs.get("v") or [None])[0]
+                    if not vid:
+                        return None
+                    list_id = (qs.get("list") or [None])[0]
+                    if list_id:
+                        return f"https://www.youtube.com/watch?v={vid}&list={list_id}"
+                    return f"https://www.youtube.com/watch?v={vid}"
                 for prefix in ("/shorts/", "/embed/", "/live/"):
-                    if u.pathname.startswith(prefix):
-                        vid = u.pathname[len(prefix) :].split("/")[0]
+                    if (u.path or "").startswith(prefix):
+                        vid = (u.path or "")[len(prefix) :].split("/")[0]
                         return f"https://www.youtube.com/watch?v={vid}" if vid else None
         except Exception:
             pass
@@ -250,6 +272,26 @@ def normalize_url(text: str) -> str | None:
     if text.startswith("www."):
         return "https://" + text
     return None
+
+
+def is_playlist_url(url: str) -> bool:
+    low = (url or "").lower()
+    return "list=" in low or "/playlist" in low
+
+
+def single_video_url(url: str) -> str:
+    """If a watch URL also has list=, keep only the single video."""
+    try:
+        from urllib.parse import parse_qs, urlparse
+
+        u = urlparse(url)
+        if "watch" in (u.path or "") and "v=" in (u.query or ""):
+            vid = (parse_qs(u.query).get("v") or [None])[0]
+            if vid:
+                return f"https://www.youtube.com/watch?v={vid}"
+    except Exception:
+        pass
+    return url
 
 
 def download_one(
@@ -480,7 +522,7 @@ def run_gui() -> None:
         except Exception:
             name = "Download"
         tips = {
-            "Download": "Step 2 → Format (Music MP3 / Video MP4) under Quality · then Download",
+            "Download": "Playlists: enable “Download full playlists” under Quality · Limit 0 = all videos",
             "Convert": "Browse a file or folder, pick a format, convert locally — nothing leaves your PC.",
             "Library": "Find past exports. Select a row and press Open.",
         }
@@ -506,7 +548,7 @@ def run_gui() -> None:
     section_label(
         card_inner,
         "Add links",
-        "YouTube, SoundCloud, Vimeo, and more — one URL per line",
+        "Single videos or full playlists — YouTube, SoundCloud, and more — one URL per line",
         step="1",
     )
 
@@ -644,7 +686,7 @@ def run_gui() -> None:
     section_label(
         mode_row,
         "Quality & save folder",
-        "Choose Music (MP3) or Video (MP4), then quality and save path",
+        "Music/Video format · turn on playlists to download every video in a list",
         step="2",
     )
 
@@ -691,7 +733,41 @@ def run_gui() -> None:
     # Extra settings
     extra = ttk.Frame(mode_row, style="Glass.TFrame")
     extra.pack(fill="x", pady=(8, 0))
-    ttk.Label(extra, text="FILENAME TEMPLATE", style="GlassMuted.TLabel").grid(row=0, column=0, sticky="w")
+
+    playlist_var = tk.BooleanVar(value=bool(saved.get("downloadPlaylists", True)))
+    plimit_var = tk.StringVar(value=str(saved.get("playlistLimit") or "0"))
+
+    ttk.Label(extra, text="PLAYLISTS", style="GlassMuted.TLabel").grid(row=0, column=0, sticky="w")
+    pl_opts = ttk.Frame(extra, style="Glass.TFrame")
+    pl_opts.grid(row=1, column=0, sticky="w", pady=(2, 0))
+    ttk.Checkbutton(
+        pl_opts,
+        text="Download full playlists",
+        variable=playlist_var,
+        style="Dark.TCheckbutton",
+        command=lambda: persist_settings(),
+    ).pack(side="left")
+    ttk.Label(pl_opts, text="Limit (0=all)", style="GlassMuted.TLabel").pack(
+        side="left", padx=(12, 4)
+    )
+    plimit_entry = tk.Entry(
+        pl_opts,
+        textvariable=plimit_var,
+        width=6,
+        bg=G["input"],
+        fg=G["text"],
+        insertbackground=G["accent"],
+        relief="flat",
+        highlightthickness=1,
+        highlightbackground=G["input_edge"],
+        highlightcolor=G["accent"],
+        font=font_ui,
+    )
+    plimit_entry.pack(side="left", ipady=3)
+
+    ttk.Label(extra, text="FILENAME TEMPLATE", style="GlassMuted.TLabel").grid(
+        row=0, column=1, sticky="w", padx=(16, 0)
+    )
     tmpl_var = tk.StringVar(value=saved.get("filenameTemplate") or "%(title)s [%(id)s]")
     tmpl_entry = tk.Entry(
         extra,
@@ -706,25 +782,7 @@ def run_gui() -> None:
         highlightcolor=G["accent"],
         font=font_ui,
     )
-    tmpl_entry.grid(row=1, column=0, sticky="w", pady=(2, 0), ipady=3)
-    ttk.Label(extra, text="PLAYLIST LIMIT (0=all)", style="GlassMuted.TLabel").grid(
-        row=0, column=1, sticky="w", padx=(12, 0)
-    )
-    plimit_var = tk.StringVar(value=str(saved.get("playlistLimit") or "0"))
-    plimit_entry = tk.Entry(
-        extra,
-        textvariable=plimit_var,
-        width=8,
-        bg=G["input"],
-        fg=G["text"],
-        insertbackground=G["accent"],
-        relief="flat",
-        highlightthickness=1,
-        highlightbackground=G["input_edge"],
-        highlightcolor=G["accent"],
-        font=font_ui,
-    )
-    plimit_entry.grid(row=1, column=1, sticky="w", padx=(12, 0), pady=(2, 0), ipady=3)
+    tmpl_entry.grid(row=1, column=1, sticky="w", padx=(16, 0), pady=(2, 0), ipady=3)
     ttk.Label(extra, text="AUDIO FORMAT", style="GlassMuted.TLabel").grid(
         row=0, column=2, sticky="w", padx=(12, 0)
     )
@@ -759,6 +817,7 @@ def run_gui() -> None:
                 "outDir": out_var.get(),
                 "filenameTemplate": tmpl_var.get(),
                 "playlistLimit": plimit_var.get(),
+                "downloadPlaylists": bool(playlist_var.get()),
                 "audioFormat": fmt_var.get(),
                 "writeSubs": bool(subs_var.get()),
                 "writeThumbnail": bool(thumb_var.get()),
@@ -954,6 +1013,7 @@ def run_gui() -> None:
             plimit = int(plimit_var.get() or "0")
         except ValueError:
             plimit = 0
+        allow_playlists = bool(playlist_var.get())
         item = "video" if mode == "video" else audio_format.upper()
         label = "Video" if mode == "video" else "Track"
         persist_settings()
@@ -963,20 +1023,28 @@ def run_gui() -> None:
             set_busy(True)
             ok = 0
             try:
-                set_progress(0, "Expanding links / playlists…")
+                set_progress(
+                    0,
+                    "Expanding playlists…" if allow_playlists else "Preparing queue…",
+                )
                 expanded: list[str] = []
                 for u in urls:
                     if cancel_flag["on"]:
                         break
                     try:
-                        if _tubetone is not None and (
-                            "list=" in u or "/playlist" in u
-                        ):
-                            expanded.extend(_tubetone.expand_playlist(u, limit=plimit))
+                        if allow_playlists and is_playlist_url(u) and _tubetone is not None:
+                            set_progress(0, f"Reading playlist… {u[:60]}")
+                            items = _tubetone.expand_playlist(u, limit=plimit)
+                            if not items:
+                                items = [single_video_url(u)]
+                            expanded.extend(items)
+                        elif is_playlist_url(u) and not allow_playlists:
+                            # Watch URLs with list= → only that one video
+                            expanded.append(single_video_url(u))
                         else:
                             expanded.append(u)
                     except Exception:
-                        expanded.append(u)
+                        expanded.append(single_video_url(u) if is_playlist_url(u) else u)
                 # de-dupe
                 seen: set[str] = set()
                 final_urls: list[str] = []
@@ -985,7 +1053,22 @@ def run_gui() -> None:
                         seen.add(u)
                         final_urls.append(u)
 
-                set_progress(0, f"Queue: {len(final_urls)} item(s)")
+                if not final_urls:
+                    set_progress(0, "No videos found in playlist / links")
+                    root.after(
+                        0,
+                        lambda: messagebox.showwarning(
+                            "Playlist",
+                            "No videos found. Check the link or turn on “Download full playlists”.",
+                        ),
+                    )
+                    return
+
+                set_progress(
+                    0,
+                    f"Queue: {len(final_urls)} item(s)"
+                    + (" from playlist(s)" if any(is_playlist_url(x) for x in urls) else ""),
+                )
                 for i, url in enumerate(final_urls, 1):
                     if cancel_flag["on"]:
                         set_progress(i / max(len(final_urls), 1) * 100, "Cancelled")

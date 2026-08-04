@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { api } from "@/lib/api";
+import { Field, PageHero, PageShell } from "@/components/PageShell";
 
 type Status = {
   id: string;
@@ -30,41 +31,42 @@ export default function OrderStatusPage() {
   }
 
   return (
-    <main className="sans mx-auto max-w-3xl px-5 py-16">
-      <h1 className="font-[family-name:var(--font-display)] text-4xl text-[#2dd4bf]">Order status</h1>
-      <p className="mt-3 text-[#7a96a8]">
-        Enter the order ID from your Pricing request to see if your license is ready.
-      </p>
-      <form onSubmit={check} className="mt-8 flex flex-wrap gap-2">
-        <input
-          className="min-w-[240px] flex-1 rounded-lg border border-[#2a4558] bg-[#0a1219] px-3 py-2"
+    <PageShell narrow>
+      <PageHero
+        kicker="Orders"
+        title="Order status"
+        lead="Enter the order ID from your Pricing request."
+      />
+      <form onSubmit={check} className="surface flex flex-wrap items-end gap-3">
+        <Field
+          className="min-w-[240px] flex-1"
           placeholder="Order ID"
           value={orderId}
           onChange={(e) => setOrderId(e.target.value)}
           required
         />
-        <button className="rounded-lg bg-[#2dd4bf] px-4 py-2 font-semibold text-[#042f2e]">
+        <button type="submit" className="btn-primary">
           Check
         </button>
       </form>
-      {error ? <p className="mt-4 text-red-400">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-[var(--danger)]">{error}</p> : null}
       {data ? (
-        <div className="mt-6 rounded-2xl border border-[#2a4558] bg-[#12202b] p-6">
-          <p>
-            Status: <strong className="uppercase text-[#2dd4bf]">{data.status}</strong>
-          </p>
-          <p className="mt-2 text-sm text-[#7a96a8]">
+        <div className="surface mt-6">
+          <span className="status-chip">{data.status}</span>
+          <p className="mt-4 text-sm text-[var(--muted)]">
             Plan {data.plan} · {data.email}
           </p>
           {data.licenseKey ? (
-            <p className="mt-4 font-mono text-[#2dd4bf]">{data.licenseKey}</p>
+            <p className="mt-4 rounded-[var(--radius-sm)] bg-white/80 px-4 py-3 font-mono text-sm text-[var(--violet-deep)]">
+              {data.licenseKey}
+            </p>
           ) : (
-            <p className="mt-4 text-sm text-[#7a96a8]">
+            <p className="mt-4 text-sm text-[var(--muted)]">
               License key appears here once the order is marked paid.
             </p>
           )}
         </div>
       ) : null}
-    </main>
+    </PageShell>
   );
 }
