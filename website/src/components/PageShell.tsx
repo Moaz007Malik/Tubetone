@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { Tilt3D } from "@/components/Tilt3D";
 
 export function PageShell({
   children,
@@ -9,9 +10,11 @@ export function PageShell({
 }) {
   return (
     <main
-      className={`relative mx-auto w-full px-4 py-12 md:px-6 md:py-16 ${narrow ? "max-w-3xl" : "max-w-6xl"}`}
+      className={`stage-3d relative mx-auto w-full px-4 py-12 md:px-6 md:py-16 ${narrow ? "max-w-3xl" : "max-w-6xl"}`}
     >
-      <div className="glossy-card px-6 py-10 md:px-10 md:py-12">{children}</div>
+      <Tilt3D className="glossy-card card-3d px-6 py-10 md:px-10 md:py-12" max={5} lift={12}>
+        {children}
+      </Tilt3D>
     </main>
   );
 }
@@ -32,7 +35,7 @@ export function PageHero({
       {lead ? (
         <p className="mt-3 text-base leading-relaxed text-[var(--muted)] md:text-lg">{lead}</p>
       ) : null}
-      <div className="mt-6 h-1.5 w-14 rounded-full bg-gradient-to-r from-[var(--indigo)] via-[var(--violet)] to-[var(--sky)]" />
+      <div className="mt-6 h-1.5 w-14 rounded-full bg-gradient-to-r from-[var(--indigo)] via-[var(--violet)] to-[var(--sky)] shadow-[0_0_20px_rgba(139,92,246,0.5)]" />
     </header>
   );
 }
@@ -44,7 +47,7 @@ export function Panel({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`surface ${className}`}>{children}</div>;
+  return <div className={`surface card-3d ${className}`}>{children}</div>;
 }
 
 export function Field(props: InputHTMLAttributes<HTMLInputElement>) {

@@ -61,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <GradientBg intensity="hero" />
-        <div className="site-shell">
+        <div className="site-shell stage-root">
           <SiteHeader />
           <div className="site-main">{children}</div>
           <SiteFooter />

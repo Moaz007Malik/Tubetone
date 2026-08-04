@@ -4,7 +4,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 export function SiteFooter() {
   return (
     <footer className="mt-auto px-4 pb-10 md:px-6">
-      <div className="glass-bar mx-auto max-w-6xl overflow-hidden rounded-[var(--radius-lg)]">
+      <div className="glass-bar glass-bar--float card-3d mx-auto max-w-6xl overflow-hidden rounded-[var(--radius-lg)]">
         <div className="grid gap-10 px-6 py-12 md:grid-cols-[1.35fr_1fr_1fr] md:px-10">
           <div>
             <BrandLogo size={42} showWordmark wordmarkClassName="logo-type text-xl tracking-[-0.04em]" />

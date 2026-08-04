@@ -11,7 +11,6 @@ const NAV = [
   { href: "/pricing", label: "Pricing" },
   { href: "/download", label: "Download" },
   { href: "/docs", label: "Docs" },
-  { href: "/faq", label: "FAQ" },
   { href: "/support", label: "Support" },
 ];
 
@@ -20,67 +19,76 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-4 md:px-6">
-      <div className="glass-bar mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-[var(--radius-pill)] px-4 py-2.5 md:px-5">
-        <Link href="/" className="flex items-center gap-2.5 no-underline">
-          <BrandLogo size={38} priority showWordmark />
+    <header className="site-header sticky top-0 z-50 px-4 pt-3 md:px-6 md:pt-4">
+      <div className="site-header__bar mx-auto flex max-w-6xl items-center justify-between gap-3">
+        <Link href="/" className="site-header__brand no-underline">
+          <BrandLogo size={36} priority showWordmark wordmarkClassName="logo-type text-[1.05rem] tracking-[-0.04em]" />
         </Link>
 
-        <nav className="hidden items-center gap-0.5 lg:flex">
+        <nav className="site-header__nav hidden lg:flex" aria-label="Primary">
           {NAV.map((item) => {
             const active = path === item.href || path.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium no-underline transition-colors ${
-                  active
-                    ? "bg-[var(--signal-dim)] text-[var(--ink)]"
-                    : "text-[var(--muted)] hover:text-[var(--ink)]"
-                }`}
+                className={`site-header__link ${active ? "is-active" : ""}`}
               >
                 {item.label}
               </Link>
             );
           })}
-          <Link href="/activate" className="btn-ghost ml-2 !px-4 !py-2 !text-sm">
+        </nav>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          <Link href="/activate" className="site-header__text-link">
             Activate
           </Link>
-          <Link href="/pricing" className="btn-primary ml-1 !px-4 !py-2 !text-sm">
+          <Link href="/pricing" className="btn-primary site-header__cta">
             Get license
           </Link>
-        </nav>
+        </div>
 
         <button
           type="button"
-          className="rounded-full border border-[var(--line)] bg-white/5 px-3 py-1.5 text-sm font-semibold text-[var(--ink)] lg:hidden"
+          className="site-header__menu lg:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
+          aria-label={open ? "Close menu" : "Open menu"}
         >
           {open ? "Close" : "Menu"}
         </button>
       </div>
 
       {open ? (
-        <div className="glass-bar mx-auto mt-2 max-w-6xl rounded-[var(--radius)] p-4 lg:hidden">
-          <div className="flex flex-col gap-1">
+        <div className="site-header__drawer mx-auto mt-2 max-w-6xl lg:hidden">
+          <div className="flex flex-col gap-0.5">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-[var(--muted)] no-underline hover:bg-[var(--signal-dim)] hover:text-[var(--ink)]"
+                className="site-header__drawer-link"
               >
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/activate"
-              onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--violet)] no-underline"
-            >
-              Activate
-            </Link>
+            <div className="mt-2 flex flex-col gap-2 border-t border-[var(--line)] pt-3">
+              <Link
+                href="/activate"
+                onClick={() => setOpen(false)}
+                className="site-header__drawer-link font-semibold text-[var(--violet-deep)]"
+              >
+                Activate license
+              </Link>
+              <Link
+                href="/pricing"
+                onClick={() => setOpen(false)}
+                className="btn-primary text-center"
+              >
+                Get license
+              </Link>
+            </div>
           </div>
         </div>
       ) : null}
