@@ -1,5 +1,6 @@
 import { json, options, rateLimit, readJson } from "@/lib/http";
 import { prisma } from "@/lib/db";
+import { dbErrorHint, ensureDbReady, isDbConnectivityError } from "@/lib/ensure-db";
 
 export async function OPTIONS(req: Request) {
   return options(req);
@@ -12,6 +13,8 @@ export async function POST(req: Request) {
   }
 
   try {
+    await ensureDbReady();
+
     const body = await readJson<{
       email?: string;
       name?: string;
@@ -53,6 +56,7 @@ export async function POST(req: Request) {
         couponCode,
         note: body.note?.trim() || null,
         status: "pending",
+        updatedAt: new Date(),
       },
     });
 
@@ -64,6 +68,10 @@ export async function POST(req: Request) {
         "Order received. Complete manual payment, then an admin will issue your license key.",
     });
   } catch (e) {
+    console.error("[orders]", e);
+    if (isDbConnectivityError(e)) {
+      return json(req, { error: dbErrorHint(e) }, 503);
+    }
     return json(req, { error: e instanceof Error ? e.message : "Order failed" }, 400);
   }
 }

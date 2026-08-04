@@ -4,10 +4,15 @@ export async function register() {
   try {
     assertJwtSecret();
   } catch (err) {
-    // Fail fast in production so weak secrets never ship
+    // Don't crash the whole server — login returns a clear 503 instead
     console.error("[ytmp-api]", err instanceof Error ? err.message : err);
-    if (process.env.NODE_ENV === "production") {
-      throw err;
-    }
+  }
+
+  // Warm DB / seed admin (non-fatal if it fails; requests retry ensureDbReady)
+  try {
+    const { ensureDbReady } = await import("@/lib/ensure-db");
+    await ensureDbReady();
+  } catch (err) {
+    console.error("[ytmp-api] DB init:", err instanceof Error ? err.message : err);
   }
 }

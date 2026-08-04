@@ -13,25 +13,39 @@ import {
 import { signAdminToken } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/licensing";
+import { dbErrorHint, ensureDbReady, isDbConnectivityError } from "@/lib/ensure-db";
 
 export async function OPTIONS(req: Request) {
   return options(req);
 }
 
 export async function POST(req: Request) {
-  assertJwtSecret();
+  try {
+    assertJwtSecret();
+  } catch (e) {
+    return json(
+      req,
+      { error: e instanceof Error ? e.message : "Server misconfigured (JWT_SECRET)" },
+      503
+    );
+  }
+
   const ip = req.headers.get("x-forwarded-for") || "local";
   if (!rateLimit(`admin-login:${ip}`, 10, 60_000)) {
     return json(req, { error: "Too many attempts" }, 429);
   }
+
   try {
+    await ensureDbReady();
+
     const body = await readJson<{ email?: string; password?: string }>(req);
     const email = (body.email || "").toLowerCase().trim();
     const password = body.password || "";
-    if (!email || !password) return json(req, { error: "Email and password required" }, 400);
+    if (!email || !password) {
+      return json(req, { error: "Email and password required" }, 400);
+    }
 
     const admin = await prisma.admin.findUnique({ where: { email } });
-    // Constant-ish failure message
     if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
       return json(req, { error: "Invalid credentials" }, 401);
     }
@@ -46,6 +60,10 @@ export async function POST(req: Request) {
     res.cookies.set(ADMIN_COOKIE, token, adminCookieOptions());
     return res;
   } catch (e) {
+    console.error("[admin/login]", e);
+    if (isDbConnectivityError(e)) {
+      return json(req, { error: dbErrorHint(e) }, 503);
+    }
     return json(req, { error: e instanceof Error ? e.message : "Login failed" }, 400);
   }
 }
