@@ -10,9 +10,9 @@ export function PageShell({
 }) {
   return (
     <main
-      className={`stage-3d relative mx-auto w-full px-4 py-12 md:px-6 md:py-16 ${narrow ? "max-w-3xl" : "max-w-6xl"}`}
+      className={`stage-3d relative mx-auto w-full px-3 py-8 sm:px-4 sm:py-12 md:px-6 md:py-16 ${narrow ? "max-w-3xl" : "max-w-6xl"}`}
     >
-      <Tilt3D className="glossy-card card-3d px-6 py-10 md:px-10 md:py-12" max={5} lift={12}>
+      <Tilt3D className="glossy-card card-3d px-4 py-8 sm:px-6 sm:py-10 md:px-10 md:py-12" max={5} lift={12}>
         {children}
       </Tilt3D>
     </main>

@@ -4,23 +4,23 @@ import { Tilt3D } from "@/components/Tilt3D";
 
 export default function HomePage() {
   return (
-    <main className="stage-3d px-4 md:px-6">
-      <section className="hero layer-3d mx-auto mt-5 max-w-6xl md:mt-8">
-        <div className="hero__grid grid items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8">
+    <main className="stage-3d px-3 sm:px-4 md:px-6">
+      <section className="hero layer-3d mx-auto mt-4 max-w-6xl sm:mt-5 md:mt-8">
+        <div className="hero__grid grid items-center gap-8 sm:gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8">
           <div className="hero__copy relative z-10 text-lift-3d">
             <div className="hero-kicker rise">
               <span className="hero-kicker__dot" />
               Built for Windows
             </div>
-            <h1 className="hero-brand rise rise-delay-1 mt-4">YTMP</h1>
-            <p className="hero-line rise rise-delay-2 mt-4 max-w-xl">
+            <h1 className="hero-brand rise rise-delay-1 mt-3 sm:mt-4">YTMP</h1>
+            <p className="hero-line rise rise-delay-2 mt-3 sm:mt-4 max-w-xl">
               Local media toolkit for download & convert
             </p>
-            <p className="hero-sub rise rise-delay-2 mt-4 max-w-md">
+            <p className="hero-sub rise rise-delay-2 mt-3 sm:mt-4 max-w-md">
               Paste links or open local files. Save audio and video, convert folders, and keep
               everything private on your PC — no cloud upload.
             </p>
-            <div className="btn-row rise rise-delay-3 mt-8">
+            <div className="btn-row rise rise-delay-3 mt-6 sm:mt-8">
               <Link href="/pricing" className="btn-primary">
                 Get a license
               </Link>
@@ -41,13 +41,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto mt-20 max-w-6xl md:mt-28">
+      <section className="mx-auto mt-14 max-w-6xl sm:mt-20 md:mt-28">
         <div className="section-head">
           <p className="label">How it works</p>
           <h2 className="display-title">Start in three steps</h2>
           <p>Subscribe, install, and create offline exports on your machine.</p>
         </div>
-        <div className="grid-3d grid gap-5 md:grid-cols-3">
+        <div className="grid-3d grid gap-4 sm:gap-5 sm:grid-cols-2 md:grid-cols-3">
           {[
             [
               "01",
@@ -79,20 +79,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto mt-20 max-w-6xl md:mt-28">
-        <Tilt3D className="glossy-card card-3d overflow-hidden px-6 py-12 md:px-12 md:py-16" max={4} lift={14}>
-          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+      <section className="mx-auto mt-14 max-w-6xl sm:mt-20 md:mt-28">
+        <Tilt3D className="glossy-card card-3d overflow-hidden px-4 py-8 sm:px-6 sm:py-12 md:px-12 md:py-16" max={4} lift={14}>
+          <div className="flex flex-col gap-6 sm:gap-8 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="label">Product</p>
-              <h2 className="display-title mt-2 max-w-lg text-3xl md:text-4xl">
+              <h2 className="display-title mt-2 max-w-lg text-2xl sm:text-3xl md:text-4xl">
                 Workspaces made for media flow
               </h2>
             </div>
-            <Link href="/tools" className="btn-ghost shrink-0">
+            <Link href="/tools" className="btn-ghost shrink-0 w-full sm:w-auto">
               Full toolkit
             </Link>
           </div>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-2 md:grid-cols-3">
             {[
               {
                 t: "Download",
@@ -120,13 +120,13 @@ export default function HomePage() {
         </Tilt3D>
       </section>
 
-      <section className="mx-auto mt-20 max-w-6xl md:mt-28">
+      <section className="mx-auto mt-14 max-w-6xl sm:mt-20 md:mt-28">
         <div className="section-head">
           <p className="label">Capabilities</p>
           <h2 className="display-title">Everything for offline media craft</h2>
           <p>Local-first toolkit — the cloud never sees your files.</p>
         </div>
-        <div className="grid-3d grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid-3d grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             ["Multi-site", "YouTube and sites yt-dlp supports"],
             ["Playlists", "Full list or first-N limit"],
@@ -145,18 +145,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto my-20 max-w-6xl md:my-28">
+      <section className="mx-auto my-14 max-w-6xl sm:my-20 md:my-28">
         <Tilt3D className="cta-band card-3d" max={4} lift={16}>
           <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-indigo-400/20 blur-3xl" />
           <div className="absolute -bottom-16 left-10 h-52 w-52 rounded-full bg-fuchsia-400/15 blur-3xl" />
-          <div className="relative flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+          <div className="relative flex flex-col items-stretch justify-between gap-6 sm:gap-8 md:flex-row md:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 Get started
               </p>
               <p className="cta-band__title">Install once. Create offline, anytime.</p>
             </div>
-            <div className="btn-row">
+            <div className="btn-row md:shrink-0">
               <Link href="/pricing" className="cta-btn-light">
                 View pricing
               </Link>

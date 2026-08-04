@@ -45,7 +45,7 @@ export default function FeaturesPage() {
         title="Built for glossy offline craft"
         lead="YTMP is a local media toolkit — download from the web, convert without uploads."
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         {features.map((f, i) => (
           <article key={f.title} className="feature-tile">
             <div

@@ -57,7 +57,7 @@ export default function PricingPage() {
         lead="Manual payments for now — submit a request, pay as instructed, receive your license key."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 md:grid-cols-3">
         {plans.map((p) => (
           <button
             key={p.id}
@@ -72,7 +72,7 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <form onSubmit={submit} className="surface mt-10 max-w-lg space-y-3">
+      <form onSubmit={submit} className="surface mt-8 w-full max-w-lg space-y-3 sm:mt-10">
         <h2 className="display-title text-lg tracking-tight">Request access</h2>
         <Field
           placeholder="Email"
