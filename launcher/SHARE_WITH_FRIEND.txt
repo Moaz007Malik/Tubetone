@@ -1,18 +1,18 @@
-YTMP — Windows media downloader
+YTMP — Windows media toolkit
 ================================
 
-Includes Music (MP3) and Video (MP4) download.
+Download, convert, and manage offline media. Requires an active YTMP license.
 
 INSTALL
   1. Run YTMP-Setup.exe (or open YTMP.exe from the release folder)
-  2. Activate with your YM- license key
+  2. Activate with your YM- license key from the website
 
 DOWNLOAD
   1. Paste link(s)
   2. Choose mode:
      - Music (MP3)  → audio (bitrate + format options)
      - Video (MP4)  → video (quality 360–best + audio bitrate)
-  3. Click Download MP3 or Download Video
+  3. Click Download
 
 ALSO
   - Convert tab: convert local files to other formats
@@ -21,5 +21,7 @@ ALSO
 
 Default save folder: Downloads\YTMP
 Log: %LOCALAPPDATA%\YTMP\launcher.log
+Config (optional override): %LOCALAPPDATA%\YTMP\config.json
+  { "apiUrl": "https://api.your-domain.com", "websiteUrl": "https://www.your-domain.com" }
 
 Only download content you have the right to use.

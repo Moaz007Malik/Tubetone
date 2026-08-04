@@ -1,27 +1,52 @@
-# YTMP — YouTube → MP3 & Video (subscription)
+# YTMP — Local media toolkit for Windows
 
-Standalone Windows app + license API + public website + separate admin.
+**Subscription Windows app** + **license API** + **public website** + **admin**.  
+Downloads/conversion run on the PC via [yt-dlp](https://github.com/yt-dlp/yt-dlp) + ffmpeg. Online license required.
 
-Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) + **ffmpeg** on the PC. Downloads require an active online license.
+> **Production deploy:** see **[PRODUCTION.md](./PRODUCTION.md)** (env files, HTTPS, desktop config defaults).
 
-## Local SaaS stack (API + website + admin)
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `api/` | License & order API (Next.js, Prisma) |
+| `website/` | Public marketing site |
+| `admin/` | Admin dashboard |
+| `launcher/` | Windows app + installer build |
+| `extension/` + `server/` | Optional legacy Chrome / remote download path |
+
+---
+
+## Production (quick)
+
+1. Copy production env examples and set real domains/secrets:
+   - `api/.env.production.example`
+   - `website/.env.production.example`
+   - `admin/.env.production.example`
+   - `launcher/config.defaults.example.json` → `launcher/config.defaults.json`
+2. Build & deploy API, website, admin (`npm run build` / host start commands).
+3. Build Windows installer: `launcher\build.bat` then `launcher\build_installer.bat`.
+
+Full checklist: [PRODUCTION.md](./PRODUCTION.md).
+
+---
+
+## Local development
 
 ```bat
 cd api
+copy .env.example .env
 npm install
 npm run db:setup
 npm run dev
 ```
 
 API: http://127.0.0.1:8787  
-Default admin: `admin@ytmp.app` / `admin123!` (change in `api/.env`)
-
-SMTP (optional — auto-email license keys): set `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` in `api/.env`.
-
-Security: admin session uses httpOnly cookies; set a strong `JWT_SECRET` before production. Audit log is under Admin → Audit log.
+Default admin: `admin@ytmp.app` / `admin123!` (change before any public deploy)
 
 ```bat
 cd website
+copy .env.example .env.local
 npm install
 npm run dev
 ```
@@ -30,147 +55,48 @@ Website: http://127.0.0.1:3000
 
 ```bat
 cd admin
+copy .env.example .env.local
 npm install
 npm run dev
 ```
 
 Admin: http://127.0.0.1:3001
 
-**Manual payments:** user submits an order on `/pricing` → admin **Mark paid** on Orders → copy license key → user activates in the app.
+**Payments flow:** user orders on `/pricing` → admin **Mark paid** → license key → user activates in the app.
 
-Desktop API URL: `%LOCALAPPDATA%\YTMP\config.json` (see `launcher/config.example.json`).
+Desktop override: `%LOCALAPPDATA%\YTMP\config.json` (see `launcher/config.example.json`).  
+Production builds use `launcher/config.defaults.json` as the default API/website URLs.
+
+Optional SMTP (auto-email keys): `SMTP_*` in `api/.env`.
 
 ---
 
-## Share with a friend (Windows .exe)
-
-Paste YouTube links (Music or Video). **No Chrome extension. No Python.** Requires license activation.
-
-### Installer
+## Windows installer
 
 ```bat
 cd launcher
+REM Edit config.defaults.json first for production API/site URLs
 build.bat
 build_installer.bat
 ```
 
-Creates `release/YTMP-Setup.exe`.
-
-The installer:
-- Puts the app in `Program Files\YTMP`
-- Installs ffmpeg to `C:\ffmpeg\bin`
-- Sets `FFMPEG_LOCATION` and PATH
-- Creates a desktop shortcut
-
-### Portable folder
-
-```bat
-cd launcher
-build.bat
-```
-
-Creates `release/YTMP/`.
+- `release/YTMP/` — portable folder  
+- `release/YTMP-Setup.exe` — full installer (ffmpeg + shortcuts)
 
 ---
 
-## Optional: Chrome extension + local server
+## Optional: Chrome extension + local/remote server
 
-1. Install **ffmpeg** and keep it on PATH (or at `C:\ffmpeg\bin`)
-2. Double-click `start-server.bat` (or `python server/server.py`)
-3. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → `extension/`
-4. Use on any YouTube video
+1. Install ffmpeg (PATH or `C:\ffmpeg\bin`)
+2. `start-server.bat` or `python server/server.py`
+3. Chrome → Load unpacked → `extension/`
 
----
-
-## Option B — Deploy on Render (free) for friends
-
-### 1. Push this project to GitHub
-
-Create a repo and upload the `youtube-mp3-downloader` folder contents (including `Dockerfile` and `render.yaml`).
-
-### 2. Create the service on Render
-
-1. Go to [https://dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**  
-   *(or New → Web Service and point at the repo, runtime **Docker**)*
-2. Connect your GitHub repo
-3. Render reads `render.yaml` and creates service **tubetone**
-4. After deploy, open the service → **Environment**
-5. Copy the generated **`API_KEY`** value
-6. Copy your public URL, e.g. `https://tubetone-xxxx.onrender.com`
-
-### 3. Point the extension at Render
-
-1. Load the `extension` folder in Chrome (Load unpacked)
-2. Open the extension popup → **Server settings**
-3. Set:
-   - **Server URL** → your `https://….onrender.com` URL  
-   - **API key** → the `API_KEY` from Render
-4. Click **Save** — status should show **Online**
-5. Share the same extension folder + API key + URL with your friend
-
-### Free-tier caveats
-
-| Issue | What happens |
-| --- | --- |
-| Cold start | First request after idle (~15 min) can take 30–60s |
-| Timeouts | Long songs / slow conversion may fail on free plan |
-| YouTube bot check | Datacenter IPs get blocked — fix with cookies (below) |
-| Sleep | Free web services spin down when idle |
-
-If Render fails often, local mode (Option A) is more reliable.
-
-### Fix “Sign in to confirm you’re not a bot”
-
-YouTube blocks Render’s IP unless yt-dlp sends **your** logged-in cookies.
-
-1. On your PC, install a cookies export extension, e.g.  
-   [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
-2. Open [youtube.com](https://www.youtube.com) while **logged in**
-3. Export cookies → save as `cookies.txt` (Netscape format)
-4. On Render → your service → **Environment** → Add:
-   - **Key:** `YTDLP_COOKIES`
-   - **Value:** paste the **entire** contents of `cookies.txt`
-5. Save (redeploy). Logs should show `cookies: /tmp/tubetone/cookies.txt`
-
-**Never commit `cookies.txt` to GitHub** — it can take over your Google account.
-
-**Local alternative (no file):** set env `COOKIES_FROM_BROWSER=chrome` before starting the server.
+Deploying that download server on Render: root `Dockerfile` + `render.yaml` (legacy **tubetone** download service — not the license API).
 
 ---
 
-## Manual Render setup (without Blueprint)
+## Security notes
 
-- **Runtime:** Docker  
-- **Dockerfile path:** `./Dockerfile`  
-- **Health check path:** `/health`  
-- **Env vars:**
-  - `API_KEY` = a long random secret (share only with friends)
-  - `DOWNLOAD_DIR` = `/tmp/tubetone`
-  - `YTDLP_COOKIES` = full Netscape cookies.txt (fixes bot check)
-
----
-
-## API (for debugging)
-
-```bash
-# Health (no key)
-curl https://YOUR.onrender.com/health
-
-# Info
-curl -H "X-API-Key: YOUR_KEY" \
-  "https://YOUR.onrender.com/info?url=https://www.youtube.com/watch?v=VIDEO_ID"
-
-# Download MP3 file
-curl -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"url":"https://www.youtube.com/watch?v=VIDEO_ID","bitrate":128}' \
-  -o song.mp3 \
-  https://YOUR.onrender.com/download
-```
-
----
-
-## Notes
-
-- Chrome Web Store does **not** allow YouTube downloaders — sideload only.
+- Set a strong `JWT_SECRET` before production (API refuses weak secrets when `NODE_ENV=production`).
+- Keep `ADMIN_PASSWORD` and API URLs private as appropriate.
 - Only download content you have the right to use.
-- Keep `API_KEY` private so strangers don't burn your Render bandwidth.

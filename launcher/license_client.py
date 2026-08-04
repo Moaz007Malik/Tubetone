@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -14,15 +15,64 @@ from pathlib import Path
 DATA_DIR = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "YTMP"
 LICENSE_FILE = DATA_DIR / "license.json"
 CONFIG_FILE = DATA_DIR / "config.json"
-DEFAULT_API = os.environ.get("TUBETONE_API_URL", "http://127.0.0.1:8787")
 APP_VERSION = "1.1.0"
 
 
+def _bundled_defaults_path() -> Path | None:
+    """Locate production config.defaults.json next to the app or in the PyInstaller bundle."""
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass) / "config.defaults.json")
+        candidates.append(Path(sys.executable).resolve().parent / "config.defaults.json")
+    here = Path(__file__).resolve().parent
+    candidates.append(here / "config.defaults.json")
+    candidates.append(here / "config.example.json")
+    for p in candidates:
+        if p.is_file():
+            return p
+    return None
+
+
+def _load_bundled_defaults() -> dict:
+    """Production-first defaults: env → config.defaults.json → local fallback."""
+    api = (
+        os.environ.get("YTMP_API_URL")
+        or os.environ.get("TUBETONE_API_URL")
+        or ""
+    ).strip()
+    web = (os.environ.get("YTMP_WEBSITE_URL") or "").strip()
+    cfg: dict = {}
+    path = _bundled_defaults_path()
+    if path:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                cfg.update(data)
+        except Exception:
+            pass
+    if api:
+        cfg["apiUrl"] = api
+    if web:
+        cfg["websiteUrl"] = web
+    cfg.setdefault("apiUrl", "http://127.0.0.1:8787")
+    cfg.setdefault("websiteUrl", "http://127.0.0.1:3000")
+    return cfg
+
+
+DEFAULT_CFG = _load_bundled_defaults()
+DEFAULT_API = str(DEFAULT_CFG.get("apiUrl") or "http://127.0.0.1:8787")
+DEFAULT_WEBSITE = str(DEFAULT_CFG.get("websiteUrl") or "http://127.0.0.1:3000")
+
+
 def load_config() -> dict:
-    cfg = {"apiUrl": DEFAULT_API, "websiteUrl": "http://127.0.0.1:3000"}
+    cfg = dict(DEFAULT_CFG)
     if CONFIG_FILE.is_file():
         try:
-            cfg.update(json.loads(CONFIG_FILE.read_text(encoding="utf-8")))
+            user = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            if isinstance(user, dict):
+                cfg.update(user)
         except Exception:
             pass
     return cfg
@@ -30,6 +80,10 @@ def load_config() -> dict:
 
 def api_base() -> str:
     return str(load_config().get("apiUrl") or DEFAULT_API).rstrip("/")
+
+
+def website_base() -> str:
+    return str(load_config().get("websiteUrl") or DEFAULT_WEBSITE).rstrip("/")
 
 
 def device_fingerprint() -> str:

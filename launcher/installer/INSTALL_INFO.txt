@@ -5,7 +5,8 @@ YTMP will install:
   • Environment variable FFMPEG_LOCATION
   • C:\ffmpeg\bin added to system PATH
   • Desktop shortcut (optional)
+  • Production license API URL from config.defaults.json (bundled)
 
-Modes: Music (MP3) and Video (quality + audio bitrate).
+Requires online license activation.
 No Python or Chrome extension is required.
 Administrator permission is needed for Program Files and PATH.

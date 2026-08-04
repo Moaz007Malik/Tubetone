@@ -1,0 +1,18 @@
+{
+  "name": "ytmp",
+  "version": "1.1.0",
+  "private": true,
+  "description": "YTMP — Windows media toolkit + license API + website + admin",
+  "scripts": {
+    "dev:api": "npm --prefix api run dev",
+    "dev:website": "npm --prefix website run dev",
+    "dev:admin": "npm --prefix admin run dev",
+    "build:api": "npm --prefix api run build",
+    "build:website": "npm --prefix website run build",
+    "build:admin": "npm --prefix admin run build",
+    "build:all": "npm run build:api && npm run build:website && npm run build:admin",
+    "start:api": "npm --prefix api run start",
+    "start:website": "npm --prefix website run start",
+    "start:admin": "npm --prefix admin run start"
+  }
+}

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // API-only surface — no marketing pages needed here
+  poweredByHeader: false,
+  reactStrictMode: true,
 };
 
 export default nextConfig;

@@ -1395,8 +1395,7 @@ def run_gui() -> None:
         messagebox.showinfo("Copied", p)
 
     def manage_account() -> None:
-        cfg = license_client.load_config()
-        url = f"{cfg.get('websiteUrl', 'http://127.0.0.1:3000').rstrip('/')}/account"
+        url = f"{license_client.website_base()}/account"
         try:
             os.startfile(url)  # type: ignore[attr-defined]
         except Exception:

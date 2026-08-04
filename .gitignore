@@ -2,11 +2,14 @@ __pycache__/
 *.pyc
 .env
 .env.local
+.env.production
+.env.*.local
 cookies.txt
 **/cookies.txt
 launcher/build/
 launcher/dist/
 launcher/*.spec
+!launcher/YTMP.spec
 launcher/installer/ffmpeg_payload/bin/
 launcher/installer/ffmpeg_payload/_extract/
 launcher/installer/ffmpeg_payload/ffmpeg.zip
@@ -15,5 +18,8 @@ api/data/
 api/node_modules/
 website/node_modules/
 admin/node_modules/
+**/node_modules/
 **/next-env.d.ts
 **/.next/
+.DS_Store
+*.log

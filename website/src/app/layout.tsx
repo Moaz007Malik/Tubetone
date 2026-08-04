@@ -4,6 +4,7 @@ import { GradientBg } from "@/components/GradientBg";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
+import "@/env";
 
 /**
  * Helixa-style SaaS type (Dribbble Helixa AI chatbot landings / helexa.webflow):

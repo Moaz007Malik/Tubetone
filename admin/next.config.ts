@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  poweredByHeader: false,
+  reactStrictMode: true,
+  // Production: set NEXT_PUBLIC_API_URL before build (.env.production.example)
 };
 
 export default nextConfig;
