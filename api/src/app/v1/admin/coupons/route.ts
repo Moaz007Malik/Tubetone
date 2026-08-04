@@ -1,6 +1,6 @@
 import { json, options, requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
-import { audit } from "@/lib/licensing";
+import { audit, MAX_FREE_DAYS } from "@/lib/licensing";
 import { readJson } from "@/lib/http";
 
 export async function OPTIONS(req: Request) {
@@ -12,6 +12,14 @@ export async function GET(req: Request) {
   if (!admin) return json(req, { error: "Unauthorized" }, 401);
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
   return json(req, { coupons });
+}
+
+function clampCouponValue(type: string, value: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  if (type === "free_days") return Math.min(Math.floor(n), MAX_FREE_DAYS);
+  if (type === "percent") return Math.min(n, 100);
+  return n;
 }
 
 export async function POST(req: Request) {
@@ -38,7 +46,7 @@ export async function POST(req: Request) {
       data: {
         code,
         type,
-        value: body.value,
+        value: clampCouponValue(type, body.value),
         maxUses: body.maxUses ?? 0,
         expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
         active: body.active ?? true,
@@ -61,14 +69,20 @@ export async function PATCH(req: Request) {
       maxUses?: number;
       value?: number;
       expiresAt?: string | null;
+      type?: string;
     }>(req);
     if (!body.id) return json(req, { error: "id required" }, 400);
+
+    const existing = await prisma.coupon.findUnique({ where: { id: body.id } });
+    if (!existing) return json(req, { error: "Coupon not found" }, 404);
+
+    const type = body.type || existing.type;
     const coupon = await prisma.coupon.update({
       where: { id: body.id },
       data: {
         ...(body.active != null ? { active: body.active } : {}),
         ...(body.maxUses != null ? { maxUses: body.maxUses } : {}),
-        ...(body.value != null ? { value: body.value } : {}),
+        ...(body.value != null ? { value: clampCouponValue(type, body.value) } : {}),
         ...(body.expiresAt !== undefined
           ? { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
           : {}),

@@ -17,6 +17,22 @@ LICENSE_FILE = DATA_DIR / "license.json"
 CONFIG_FILE = DATA_DIR / "config.json"
 APP_VERSION = "1.1.0"
 
+# Last-resort production hosts when a frozen install still has localhost left over
+PRODUCTION_FALLBACK = {
+    "apiUrl": "https://ytmp-api.vercel.app",
+    "websiteUrl": "https://ytmp-website.vercel.app",
+}
+
+
+def _is_local_url(url: str) -> bool:
+    u = (url or "").strip().lower()
+    return (
+        not u
+        or "127.0.0.1" in u
+        or "localhost" in u
+        or u.startswith("http://0.0.0.0")
+    )
+
 
 def _bundled_defaults_path() -> Path | None:
     """Locate production config.defaults.json next to the app or in the PyInstaller bundle."""
@@ -28,53 +44,124 @@ def _bundled_defaults_path() -> Path | None:
         candidates.append(Path(sys.executable).resolve().parent / "config.defaults.json")
     here = Path(__file__).resolve().parent
     candidates.append(here / "config.defaults.json")
-    candidates.append(here / "config.example.json")
     for p in candidates:
         if p.is_file():
             return p
     return None
 
 
-def _load_bundled_defaults() -> dict:
-    """Production-first defaults: env → config.defaults.json → local fallback."""
+def _read_json_file(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _file_defaults() -> dict:
+    """URLs shipped with the build (config.defaults.json only — no env)."""
+    cfg: dict = {}
+    path = _bundled_defaults_path()
+    if path:
+        cfg.update(_read_json_file(path))
+    return cfg
+
+
+def _env_overrides() -> dict:
+    out: dict = {}
     api = (
         os.environ.get("YTMP_API_URL")
         or os.environ.get("TUBETONE_API_URL")
         or ""
     ).strip()
     web = (os.environ.get("YTMP_WEBSITE_URL") or "").strip()
-    cfg: dict = {}
-    path = _bundled_defaults_path()
-    if path:
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                cfg.update(data)
-        except Exception:
-            pass
     if api:
-        cfg["apiUrl"] = api
+        out["apiUrl"] = api
     if web:
-        cfg["websiteUrl"] = web
-    cfg.setdefault("apiUrl", "http://127.0.0.1:8787")
-    cfg.setdefault("websiteUrl", "http://127.0.0.1:3000")
+        out["websiteUrl"] = web
+    return out
+
+
+def _prefer_remote(cfg: dict, file_defs: dict) -> dict:
+    """
+    Promote off localhost when:
+    - packaged app (frozen), or
+    - config.defaults.json already has a public https API.
+    Legacy %LOCALAPPDATA%\\YTMP\\config.json often still points at 127.0.0.1:8787.
+    """
+    result = dict(cfg)
+    prefer_remote = bool(getattr(sys, "frozen", False)) or (
+        not _is_local_url(str(file_defs.get("apiUrl") or ""))
+    )
+
+    if not prefer_remote:
+        return result
+
+    for key, fallback in (
+        ("apiUrl", PRODUCTION_FALLBACK["apiUrl"]),
+        ("websiteUrl", PRODUCTION_FALLBACK["websiteUrl"]),
+    ):
+        current = str(result.get(key) or "")
+        if not _is_local_url(current):
+            continue
+        candidate = str(file_defs.get(key) or "").strip() or fallback
+        if not _is_local_url(candidate):
+            result[key] = candidate
+    return result
+
+
+def _load_bundled_defaults() -> dict:
+    """Production-first defaults: file → promote local → env."""
+    cfg = _file_defaults()
+    cfg.setdefault("apiUrl", PRODUCTION_FALLBACK["apiUrl"])
+    cfg.setdefault("websiteUrl", PRODUCTION_FALLBACK["websiteUrl"])
+    cfg = _prefer_remote(cfg, _file_defaults())
+    cfg.update(_env_overrides())
     return cfg
 
 
 DEFAULT_CFG = _load_bundled_defaults()
-DEFAULT_API = str(DEFAULT_CFG.get("apiUrl") or "http://127.0.0.1:8787")
-DEFAULT_WEBSITE = str(DEFAULT_CFG.get("websiteUrl") or "http://127.0.0.1:3000")
+DEFAULT_API = str(DEFAULT_CFG.get("apiUrl") or PRODUCTION_FALLBACK["apiUrl"])
+DEFAULT_WEBSITE = str(DEFAULT_CFG.get("websiteUrl") or PRODUCTION_FALLBACK["websiteUrl"])
+
+
+def save_config(cfg: dict) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    safe = {
+        "apiUrl": str(cfg.get("apiUrl") or DEFAULT_API).rstrip("/"),
+        "websiteUrl": str(cfg.get("websiteUrl") or DEFAULT_WEBSITE).rstrip("/"),
+    }
+    CONFIG_FILE.write_text(json.dumps(safe, indent=2), encoding="utf-8")
 
 
 def load_config() -> dict:
-    cfg = dict(DEFAULT_CFG)
+    file_defs = _file_defaults()
+    cfg: dict = {
+        "apiUrl": str(file_defs.get("apiUrl") or PRODUCTION_FALLBACK["apiUrl"]),
+        "websiteUrl": str(file_defs.get("websiteUrl") or PRODUCTION_FALLBACK["websiteUrl"]),
+    }
+
     if CONFIG_FILE.is_file():
-        try:
-            user = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            if isinstance(user, dict):
-                cfg.update(user)
-        except Exception:
-            pass
+        user = _read_json_file(CONFIG_FILE)
+        if user:
+            cfg.update(user)
+
+    cfg = _prefer_remote(cfg, file_defs)
+    cfg.update(_env_overrides())
+
+    # Persist a fixed config once so restarts / future builds do not re-hit localhost
+    try:
+        if CONFIG_FILE.is_file():
+            was = _read_json_file(CONFIG_FILE)
+            if _is_local_url(str(was.get("apiUrl") or "")) and not _is_local_url(
+                str(cfg.get("apiUrl") or "")
+            ):
+                save_config(cfg)
+        elif getattr(sys, "frozen", False):
+            save_config(cfg)
+    except Exception:
+        pass
+
     return cfg
 
 
@@ -96,7 +183,8 @@ def machine_name() -> str:
 
 
 def _request(method: str, path: str, body: dict | None = None, timeout: int = 20) -> dict:
-    url = f"{api_base()}{path}"
+    base = api_base()
+    url = f"{base}{path}"
     data = None if body is None else json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -116,6 +204,17 @@ def _request(method: str, path: str, body: dict | None = None, timeout: int = 20
         except Exception:
             payload = {"error": str(e)}
         raise RuntimeError(payload.get("error") or payload.get("reason") or str(e)) from e
+    except urllib.error.URLError as e:
+        reason = getattr(e, "reason", e)
+        raise RuntimeError(
+            f"Cannot reach license server at {base} ({reason}). "
+            "Check internet connection, or set apiUrl in %LOCALAPPDATA%\\YTMP\\config.json."
+        ) from e
+    except OSError as e:
+        raise RuntimeError(
+            f"Cannot reach license server at {base} ({e}). "
+            "Check internet connection."
+        ) from e
 
 
 def load_license() -> dict | None:

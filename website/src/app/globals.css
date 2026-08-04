@@ -687,7 +687,7 @@ button[type="submit"].btn-primary {
 }
 
 /* ---- Site header ---- */
-:root {
+  :root {
   --bp-nav: 1024px;
 }
 
@@ -2642,7 +2642,7 @@ footer .glass-bar {
 
 /* Tablet and below */
 @media (max-width: 1023px) {
-  body {
+body {
     perspective: none;
   }
 

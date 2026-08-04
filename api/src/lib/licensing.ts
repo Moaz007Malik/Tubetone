@@ -8,6 +8,12 @@ export function generateLicenseKey(): string {
   return `YM-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
 }
 
+/** free_days above this blow past Prisma/Postgres DateTime (year ~275760 JS max is worse). */
+export const MAX_FREE_DAYS = 36_500; // ~100 years
+
+/** Hard cap for subscription end — safe for Prisma DateTime. */
+const MAX_ENDS_AT = new Date("9999-12-31T23:59:59.999Z");
+
 export function planDurationMs(plan: string, extraDays = 0): number {
   const day = 24 * 60 * 60 * 1000;
   const base =
@@ -16,11 +22,21 @@ export function planDurationMs(plan: string, extraDays = 0): number {
       : plan === "trial"
         ? 7 * day
         : 30 * day; // monthly default
-  return base + extraDays * day;
+  const extra = Math.min(Math.max(0, Math.floor(Number(extraDays) || 0)), MAX_FREE_DAYS);
+  return base + extra * day;
 }
 
 export function addMs(from: Date, ms: number): Date {
-  return new Date(from.getTime() + ms);
+  const safeMs = Math.max(0, Number.isFinite(ms) ? ms : 0);
+  const ends = new Date(from.getTime() + safeMs);
+  if (!Number.isFinite(ends.getTime()) || ends > MAX_ENDS_AT) {
+    return new Date(MAX_ENDS_AT);
+  }
+  // Guard absurd years (e.g. free_days=9999999 → year 29406)
+  if (ends.getUTCFullYear() > 9999) {
+    return new Date(MAX_ENDS_AT);
+  }
+  return ends;
 }
 
 export async function audit(adminId: string | null, action: string, meta?: unknown) {
@@ -97,7 +113,10 @@ export async function fulfillOrder(orderId: string, adminId: string | null) {
     if (coupon && coupon.active) {
       if (!coupon.expiresAt || coupon.expiresAt > new Date()) {
         if (coupon.maxUses === 0 || coupon.usedCount < coupon.maxUses) {
-          if (coupon.type === "free_days") extraDays = Math.floor(coupon.value);
+          if (coupon.type === "free_days") {
+            const n = Math.floor(Number(coupon.value) || 0);
+            extraDays = Math.min(Math.max(0, n), MAX_FREE_DAYS);
+          }
           await prisma.coupon.update({
             where: { id: coupon.id },
             data: { usedCount: { increment: 1 } },

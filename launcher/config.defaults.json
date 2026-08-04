@@ -1,4 +1,4 @@
 {
-  "apiUrl": "https://api.your-domain.com",
-  "websiteUrl": "https://www.your-domain.com"
+  "apiUrl": "https://ytmp-api.vercel.app",
+  "websiteUrl": "https://ytmp-website.vercel.app"
 }

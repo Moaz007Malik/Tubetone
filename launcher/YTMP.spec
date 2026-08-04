@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-  datas = [('../server', 'server'), ('tubetone.ico', '.'), ('music-logo.png', '.'), ('music-logo-40.png', '.'), ('icon.png', '.'), ('../music-logo.png', '.'), ('../icon.png', '.'), ('config.defaults.json', '.')]
+datas = [('..\\server', 'server'), ('tubetone.ico', '.'), ('..\\icon.png', '.'), ('config.defaults.json', '.')]
 binaries = []
 hiddenimports = ['license_client', 'settings_store', 'ytdlp_updater', 'media_tools', 'glass_ui']
 tmp_ret = collect_all('yt_dlp')
@@ -10,7 +10,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
     ['tubetone_app.py'],
-    pathex=['../server', '.'],
+    pathex=['..\\server', '.'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
