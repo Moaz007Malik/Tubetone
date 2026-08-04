@@ -33,14 +33,60 @@ export async function audit(adminId: string | null, action: string, meta?: unkno
   });
 }
 
+/** Email must never block / fail license issuance (SMTP often hangs on serverless). */
+function queueLicenseEmail(opts: {
+  adminId: string | null;
+  to: string;
+  licenseKey: string;
+  plan: string;
+  endsAt: Date;
+}) {
+  void (async () => {
+    try {
+      const mail = await sendLicenseEmail({
+        to: opts.to,
+        licenseKey: opts.licenseKey,
+        plan: opts.plan,
+        endsAt: opts.endsAt,
+      });
+      await audit(opts.adminId, "email.license", {
+        to: opts.to,
+        sent: mail.sent,
+        skipped: mail.skipped || false,
+        error: mail.error || null,
+      });
+    } catch (e) {
+      console.error("[licensing] email queue failed", e);
+      try {
+        await audit(opts.adminId, "email.license", {
+          to: opts.to,
+          sent: false,
+          error: e instanceof Error ? e.message : "email failed",
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+  })();
+}
+
 export async function fulfillOrder(orderId: string, adminId: string | null) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Order not found");
+
   if (order.status === "paid" && order.licenseId) {
     return prisma.license.findUnique({
       where: { id: order.licenseId },
       include: { subscription: { include: { user: true } } },
     });
+  }
+
+  if (order.status === "rejected") {
+    throw new Error("Order was rejected — create a new order to issue a license");
+  }
+
+  if (order.status !== "pending") {
+    throw new Error(`Only pending orders can be marked paid (current: ${order.status})`);
   }
 
   let extraDays = 0;
@@ -62,14 +108,20 @@ export async function fulfillOrder(orderId: string, adminId: string | null) {
   }
 
   const email = order.email.toLowerCase().trim();
+  const now = new Date();
+
+  // Sequential writes (no interactive $transaction) — Neon pooler often rejects Prisma interactive txns
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     user = await prisma.user.create({
-      data: { email, name: order.name || null },
+      data: {
+        email,
+        name: order.name || null,
+        updatedAt: now,
+      },
     });
   }
 
-  const now = new Date();
   const sub = await prisma.subscription.create({
     data: {
       userId: user.id,
@@ -78,6 +130,7 @@ export async function fulfillOrder(orderId: string, adminId: string | null) {
       startsAt: now,
       endsAt: addMs(now, planDurationMs(order.plan, extraDays)),
       maxDevices: 2,
+      updatedAt: now,
     },
   });
 
@@ -91,6 +144,7 @@ export async function fulfillOrder(orderId: string, adminId: string | null) {
       key,
       subscriptionId: sub.id,
       status: "active",
+      updatedAt: now,
     },
     include: { subscription: { include: { user: true } } },
   });
@@ -101,22 +155,24 @@ export async function fulfillOrder(orderId: string, adminId: string | null) {
       status: "paid",
       userId: user.id,
       licenseId: license.id,
+      updatedAt: now,
     },
   });
 
-  await audit(adminId, "order.paid", { orderId, licenseKey: key, userId: user.id });
-  const mail = await sendLicenseEmail({
+  await audit(adminId, "order.paid", {
+    orderId,
+    licenseKey: key,
+    userId: user.id,
+  });
+
+  queueLicenseEmail({
+    adminId,
     to: email,
     licenseKey: key,
     plan: order.plan,
     endsAt: license.subscription.endsAt,
   });
-  await audit(adminId, "email.license", {
-    to: email,
-    sent: mail.sent,
-    skipped: mail.skipped || false,
-    error: mail.error || null,
-  });
+
   return license;
 }
 
@@ -129,18 +185,17 @@ export async function issueLicense(opts: {
   adminId?: string | null;
 }) {
   const email = opts.email.toLowerCase().trim();
+  const now = new Date();
+
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     user = await prisma.user.create({
-      data: { email, name: opts.name || null },
+      data: { email, name: opts.name || null, updatedAt: now },
     });
   }
 
-  const now = new Date();
   const ms =
-    opts.days != null
-      ? opts.days * 24 * 60 * 60 * 1000
-      : planDurationMs(opts.plan);
+    opts.days != null ? opts.days * 24 * 60 * 60 * 1000 : planDurationMs(opts.plan);
 
   const sub = await prisma.subscription.create({
     data: {
@@ -150,6 +205,7 @@ export async function issueLicense(opts: {
       startsAt: now,
       endsAt: addMs(now, ms),
       maxDevices: opts.maxDevices ?? 2,
+      updatedAt: now,
     },
   });
 
@@ -159,7 +215,7 @@ export async function issueLicense(opts: {
   }
 
   const license = await prisma.license.create({
-    data: { key, subscriptionId: sub.id, status: "active" },
+    data: { key, subscriptionId: sub.id, status: "active", updatedAt: now },
     include: { subscription: { include: { user: true } }, devices: true },
   });
 
@@ -169,17 +225,12 @@ export async function issueLicense(opts: {
     plan: opts.plan,
   });
 
-  const mail = await sendLicenseEmail({
+  queueLicenseEmail({
+    adminId: opts.adminId ?? null,
     to: email,
     licenseKey: key,
     plan: opts.plan,
     endsAt: license.subscription.endsAt,
-  });
-  await audit(opts.adminId ?? null, "email.license", {
-    to: email,
-    sent: mail.sent,
-    skipped: mail.skipped || false,
-    error: mail.error || null,
   });
 
   return license;

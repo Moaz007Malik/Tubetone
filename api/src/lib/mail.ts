@@ -16,6 +16,10 @@ function transporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Critical on Vercel: bad/slow SMTP must not hang the request forever
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 12_000,
   });
 }
 
