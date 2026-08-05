@@ -37,7 +37,7 @@ export default function AccountPage() {
   }
 
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero kicker="License" title="Account" lead="Look up plan status with your email and key." />
       <form onSubmit={lookup} className="surface space-y-3">
         <Field

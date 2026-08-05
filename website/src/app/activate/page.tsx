@@ -11,7 +11,7 @@ const steps = [
 
 export default function ActivatePage() {
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero
         kicker="Setup"
         title="Activate"

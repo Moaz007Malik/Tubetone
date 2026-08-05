@@ -8,7 +8,7 @@ export default function DownloadPage() {
   const canDownload = hasDownloadUrl();
 
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero
         kicker="Installer"
         title="Download YTMP"

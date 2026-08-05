@@ -23,7 +23,7 @@ const entries = [
 
 export default function ChangelogPage() {
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero kicker="Releases" title="Changelog" lead="What changed and when." />
       <div className="space-y-4">
         {entries.map((e) => (

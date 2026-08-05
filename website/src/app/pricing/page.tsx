@@ -295,7 +295,7 @@ export default function PricingPage() {
         })}
       </div>
 
-      <form onSubmit={submit} className="surface mt-8 w-full max-w-lg space-y-3 sm:mt-10">
+      <form onSubmit={submit} className="surface mt-8 w-full space-y-3 sm:mt-10">
         <h2 className="display-title text-lg tracking-tight">Request access</h2>
 
         <div className="rounded-xl border border-[var(--line)] bg-[rgba(0,0,0,0.2)] px-3 py-3">

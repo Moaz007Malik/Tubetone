@@ -43,7 +43,7 @@ const faqs = [
 
 export default function FaqPage() {
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero kicker="Help" title="FAQ" lead="Short answers to the questions we hear most." />
       <div className="faq-list">
         {faqs.map((f) => (

@@ -1,20 +1,15 @@
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { Tilt3D } from "@/components/Tilt3D";
 
-export function PageShell({
-  children,
-  narrow = false,
-}: {
-  children: ReactNode;
-  narrow?: boolean;
-}) {
+/** Same outer padding + max width as SiteHeader / SiteFooter. */
+export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <main
-      className={`stage-3d relative mx-auto w-full px-3 py-8 sm:px-4 sm:py-12 md:px-6 md:py-16 ${narrow ? "max-w-3xl" : "max-w-6xl"}`}
-    >
-      <Tilt3D className="glossy-card card-3d px-4 py-8 sm:px-6 sm:py-10 md:px-10 md:py-12" max={5} lift={12}>
-        {children}
-      </Tilt3D>
+    <main className="stage-3d relative w-full px-3 py-8 sm:px-4 sm:py-12 md:px-6 md:py-16">
+      <div className="mx-auto w-full max-w-6xl">
+        <Tilt3D className="glossy-card card-3d w-full px-4 py-8 sm:px-6 sm:py-10 md:px-10 md:py-12" max={5} lift={12}>
+          {children}
+        </Tilt3D>
+      </div>
     </main>
   );
 }
@@ -29,7 +24,7 @@ export function PageHero({
   lead?: string;
 }) {
   return (
-    <header className="mb-10 max-w-2xl md:mb-12">
+    <header className="mb-10 w-full max-w-3xl md:mb-12">
       {kicker ? <p className="label mb-2">{kicker}</p> : null}
       <h1 className="display-title text-[clamp(1.9rem,4vw,2.75rem)] leading-[1.08]">{title}</h1>
       {lead ? (

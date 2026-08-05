@@ -11,7 +11,7 @@ const lastUpdated = "August 4, 2026";
 
 export default function PrivacyPage() {
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero
         kicker="Legal"
         title="Privacy policy"

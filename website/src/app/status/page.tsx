@@ -31,7 +31,7 @@ export default function OrderStatusPage() {
   }
 
   return (
-    <PageShell narrow>
+    <PageShell>
       <PageHero
         kicker="Orders"
         title="Order status"
